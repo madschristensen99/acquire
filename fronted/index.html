@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACQUIRE</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f0e8;
+  --bg-board: #e8dfd0;
+  --bg-card: #faf8f4;
+  --bg-header: #3c3530;
+  --border: #d4c9b8;
+  --border-dark: #b8a994;
+  --text: #3c3530;
+  --text-mid: #6b5e52;
+  --text-light: #9a8b7a;
+  --text-inv: #f5f0e8;
+  --red: #c0392b;
+  --green-dark: #1a5e3a;
+
+  /* Chains — rich and readable */
+  --tower: #d63031;
+  --tower-bg: #fadbd8;
+  --luxor: #27ae60;
+  --luxor-bg: #d5f5e3;
+  --american: #2980b9;
+  --american-bg: #d4e6f1;
+  --worldwide: #8e44ad;
+  --worldwide-bg: #e8daef;
+  --festival: #16a085;
+  --festival-bg: #d0ece7;
+  --imperial: #d4a017;
+  --imperial-bg: #fef3cd;
+  --continental: #e67e22;
+  --continental-bg: #fdebd0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Source Sans 3', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+  background: #3b3028;
+  color: var(--text-inv);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 48px;
+  border-bottom: 3px solid var(--imperial);
+}
+.logo {
+  font-family: 'Libre Baskerville', serif;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+.header-right .tiles-remaining {
+  color: #b8a994;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+.header-right button {
+  background: transparent;
+  border: 1px solid #6b5e52;
+  color: var(--text-inv);
+  padding: 4px 12px;
+  border-radius: 5px;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.header-right button:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: #9a8b7a;
+}
+
+/* ── STATUS BAR ── */
+.status-bar {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.status-bar .turn {
+  font-weight: 700;
+  color: var(--american);
+}
+.status-bar .message {
+  color: var(--text-mid);
+  font-weight: 500;
+  text-align: center;
+  flex: 1;
+  padding: 0 20px;
+}
+.status-bar .phase-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: var(--bg);
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* ── LAYOUT ── */
+.game-layout {
+  display: grid;
+  grid-template-columns: 1fr 290px;
+  height: calc(100vh - 48px - 37px);
+}
+
+/* ── MAIN ── */
+.main-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── BOARD ── */
+.board-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: var(--bg);
+}
+.board-frame {
+  background: var(--bg-board);
+  padding: 10px;
+  border: 2px solid var(--border-dark);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.06);
+  width: 100%;
+  max-width: 960px;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2px;
+  width: 100%;
+}
+.cell {
+  aspect-ratio: 1;
+  background: #ede6d8;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-light);
+  cursor: default;
+  transition: all 0.12s;
+  user-select: none;
+}
+.cell.placed {
+  background: #c9bfae;
+  border-color: #b3a795;
+  color: var(--text-mid);
+}
+.cell.playable {
+  background: #fff8e8;
+  border: 2px solid var(--imperial);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+}
+.cell.playable:hover {
+  background: var(--imperial);
+  color: white;
+  transform: scale(1.08);
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.cell.chain-tower { background: var(--tower); border-color: var(--tower); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
+.cell.chain-luxor { background: var(--luxor); border-color: var(--luxor); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
+.cell.chain-american { background: var(--american); border-color: var(--american); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
+.cell.chain-worldwide { background: var(--worldwide); border-color: var(--worldwide); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
+.cell.chain-festival { background: var(--festival); border-color: var(--festival); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
+.cell.chain-imperial { background: var(--imperial); border-color: var(--imperial); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
+.cell.chain-continental { background: var(--continental); border-color: var(--continental); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
+.cell.chain-center { font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+/* ── HAND BAR ── */
+.hand-bar {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.hand-tiles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hand-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-right: 4px;
+}
+.tile-btn {
+  background: var(--bg);
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.tile-btn:hover {
+  background: #fff;
+  border-color: var(--text-mid);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.tile-btn.selected {
+  background: var(--bg-header);
+  color: var(--text-inv);
+  border-color: var(--bg-header);
+}
+.tile-btn.dead {
+  opacity: 0.25;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.hand-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.btn {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.btn:hover { background: #fff; border-color: var(--text-mid); }
+.btn-primary {
+  background: var(--bg-header);
+  color: var(--text-inv);
+  border-color: var(--bg-header);
+}
+.btn-primary:hover { background: #2a2420; }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-end {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+}
+.btn-end:hover { background: #a93226; }
+.hint-text {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sb-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sb-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+/* Stock table */
+.stock-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.stock-tbl th {
+  text-align: left; font-size: 10px; font-weight: 600;
+  color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 2px 4px; border-bottom: 1px solid var(--border);
+}
+.stock-tbl td { padding: 4px; border-bottom: 1px solid #ece5d9; }
+.stock-tbl tr.inactive td { opacity: 0.3; }
+.chain-swatch {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-right: 6px;
+  border-radius: 3px; vertical-align: middle;
+  color: #fff; font-family: 'Libre Baskerville', serif;
+  font-size: 11px; font-weight: 700;
+}
+.chain-nm { font-weight: 600; }
+.stock-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; }
+.stock-price { color: var(--green-dark); }
+.safe-tag {
+  font-size: 9px; font-weight: 700; color: var(--imperial);
+  border: 1px solid var(--imperial); padding: 0 3px;
+  border-radius: 3px;
+  margin-left: 4px; letter-spacing: 0.5px;
+}
+.tier-tag {
+  font-size: 9px; font-weight: 700; padding: 0 4px;
+  border-radius: 3px; margin-left: 4px; letter-spacing: 0.3px;
+  display: inline-block;
+}
+.tier-0 { color: var(--text-light); border: 1px solid var(--border); }
+.tier-1 { color: var(--american); border: 1px solid var(--american); }
+.tier-2 { color: var(--continental); border: 1px solid var(--continental); }
+
+/* Player cards */
+.plr-card {
+  padding: 7px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  transition: all 0.15s;
+}
+.plr-card.active {
+  border-color: var(--bg-header);
+  border-width: 2px;
+  padding: 6px 9px;
+  background: #fff;
+}
+.plr-top {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 3px;
+}
+.plr-name { font-weight: 700; font-size: 13px; }
+.plr-cash {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600; font-size: 12px; color: var(--green-dark);
+}
+.plr-stocks { display: flex; gap: 3px; flex-wrap: wrap; }
+.plr-chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 600;
+  padding: 1px 5px; border: 1px solid;
+  border-radius: 3px;
+}
+
+/* Log */
+.log-box {
+  flex: 1; overflow-y: auto;
+  padding: 4px 16px 16px;
+  font-size: 11px; color: var(--text-mid);
+  line-height: 1.5;
+}
+.log-box div {
+  padding: 2px 0;
+  border-bottom: 1px solid #ece5d9;
+}
+
+/* ── MODALS ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(60,53,48,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: var(--bg-card);
+  border: 2px solid var(--border-dark);
+  border-radius: 10px;
+  padding: 24px;
+  min-width: 360px; max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+.modal h2 {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 18px; font-weight: 700;
+  margin-bottom: 10px; color: var(--text);
+}
+.modal p { color: var(--text-mid); font-size: 13px; line-height: 1.5; margin-bottom: 8px; }
+.modal p strong { color: var(--text); }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+
+/* Chain selector grid */
+.chain-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0;
+}
+.chain-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg); cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: all 0.12s;
+}
+.chain-opt:hover {
+  border-color: var(--text-mid); background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.chain-opt .sw {
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-family: 'Libre Baskerville', serif;
+  font-size: 13px; font-weight: 700;
+}
+.chain-opt .cprice { margin-left: auto; font-size: 11px; color: var(--text-light); font-family: 'IBM Plex Mono', monospace; }
+
+/* Buy modal */
+.buy-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0; border-bottom: 1px solid #ece5d9;
+}
+.buy-info { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
+.buy-price { font-size: 11px; color: var(--text-light); font-family: 'IBM Plex Mono', monospace; margin-left: 6px; }
+.buy-ctrl { display: flex; align-items: center; gap: 4px; }
+.buy-ctrl button {
+  width: 26px; height: 26px; border: 1px solid var(--border-dark);
+  border-radius: 4px;
+  background: var(--bg); color: var(--text); cursor: pointer;
+  font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  font-family: 'Source Sans 3', sans-serif; transition: all 0.1s;
+}
+.buy-ctrl button:hover { background: #fff; border-color: var(--text-mid); }
+.buy-ctrl button:disabled { opacity: 0.2; cursor: not-allowed; }
+.buy-cnt {
+  font-family: 'IBM Plex Mono', monospace; font-size: 14px;
+  font-weight: 600; width: 24px; text-align: center;
+}
+.buy-total {
+  margin-top: 12px; text-align: right;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600; font-size: 13px; color: var(--text);
+}
+
+/* Dispose */
+.disp-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 6px 0;
+}
+.disp-row label { font-size: 13px; font-weight: 500; color: var(--text-mid); }
+.disp-row input {
+  width: 52px; background: var(--bg); border: 1px solid var(--border-dark);
+  color: var(--text); padding: 4px 6px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: center;
+  border-radius: 4px;
+}
+.disp-row input:focus { outline: none; border-color: var(--text); }
+.disp-keep {
+  text-align: center; padding: 6px; background: var(--bg);
+  font-size: 13px; font-weight: 600; color: var(--text-mid);
+  border: 1px solid var(--border); margin-top: 6px;
+  border-radius: 5px;
+}
+
+/* ── SETUP ── */
+.setup {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 100vh; padding: 40px 20px;
+}
+.setup-box {
+  text-align: center; max-width: 380px;
+}
+.setup-box h1 {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 48px; font-weight: 700; color: var(--text);
+  letter-spacing: 8px; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.setup-box .sub {
+  font-size: 14px; color: var(--text-mid); margin-bottom: 28px;
+  font-weight: 500;
+}
+.setup-box .divider {
+  width: 60px; height: 2px; background: var(--border-dark);
+  margin: 0 auto 20px;
+}
+.setup-box label {
+  display: block; font-size: 11px; font-weight: 600;
+  color: var(--text-light); text-transform: uppercase;
+  letter-spacing: 1.5px; margin-bottom: 8px;
+}
+.count-btns { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; }
+.count-btn {
+  width: 42px; height: 42px; border: 2px solid var(--border-dark);
+  border-radius: 6px;
+  background: var(--bg-card); color: var(--text);
+  font-family: 'Libre Baskerville', serif; font-size: 18px; font-weight: 700;
+  cursor: pointer; transition: all 0.12s;
+}
+.count-btn:hover { border-color: var(--text); background: #fff; }
+.count-btn.sel { background: var(--bg-header); color: var(--text-inv); border-color: var(--bg-header); }
+.name-fields { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+.name-fields input {
+  background: var(--bg-card); border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  color: var(--text); padding: 8px 14px;
+  font-family: 'Source Sans 3', sans-serif; font-size: 14px; text-align: center;
+}
+.name-fields input:focus { outline: none; border-color: var(--text); background: #fff; }
+.name-fields input::placeholder { color: var(--text-light); }
+
+/* Game over */
+.gameover {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 100vh; padding: 40px;
+}
+.gameover h1 {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 36px; color: var(--text); letter-spacing: 4px; margin-bottom: 8px;
+}
+.gameover .winner {
+  font-size: 18px; font-weight: 700; color: var(--green-dark); margin-bottom: 20px;
+}
+.standings {
+  background: var(--bg-card); border: 2px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 16px 20px; min-width: 300px; margin-bottom: 20px;
+}
+.st-row {
+  display: flex; justify-content: space-between; padding: 6px 0;
+  border-bottom: 1px solid #ece5d9; font-weight: 600;
+}
+.st-row:last-child { border-bottom: none; }
+.st-row.first { font-size: 15px; }
+.st-row .rank { width: 28px; color: var(--text-light); font-family: 'IBM Plex Mono', monospace; }
+.st-row.first .rank { color: var(--text); }
+.st-cash { font-family: 'IBM Plex Mono', monospace; color: var(--green-dark); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-dark); }
+
+/* ── MOBILE ── */
+@media (max-width: 860px) {
+  .game-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: calc(100vh - 48px - 37px);
+  }
+  .sidebar {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: none;
+  }
+  .board-area { padding: 8px; }
+  .board-frame { padding: 6px; }
+  .cell { font-size: 8px; }
+  .cell.chain-center { font-size: 14px; }
+  .cell.chain-tower, .cell.chain-luxor, .cell.chain-american,
+  .cell.chain-worldwide, .cell.chain-festival, .cell.chain-imperial,
+  .cell.chain-continental { font-size: 10px; }
+  header { padding: 0 12px; height: 44px; }
+  .logo { font-size: 16px; letter-spacing: 2px; }
+  .header-right { gap: 8px; }
+  .header-right .tiles-remaining { display: none; }
+  .status-bar { padding: 6px 12px; font-size: 13px; }
+  .status-bar .phase-tag { display: none; }
+  .hand-bar {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .hand-tiles { flex-wrap: wrap; }
+  .tile-btn { padding: 5px 8px; font-size: 11px; }
+  .modal { min-width: 0; width: calc(100vw - 32px); max-width: 420px; padding: 18px; }
+  .modal h2 { font-size: 16px; }
+  .chain-grid { grid-template-columns: 1fr; }
+  .sb-section { padding: 10px 12px; }
+  .log-box { max-height: 150px; }
+}
+
+@media (max-width: 480px) {
+  .board-area { padding: 4px; }
+  .board-frame { padding: 4px; }
+  .board { gap: 1px; }
+  .cell { font-size: 7px; border-width: 1px; border-radius: 2px; }
+  .cell.chain-center { font-size: 12px; }
+  .cell.chain-tower, .cell.chain-luxor, .cell.chain-american,
+  .cell.chain-worldwide, .cell.chain-festival, .cell.chain-imperial,
+  .cell.chain-continental { font-size: 8px; }
+  .cell.playable { border-width: 1px; }
+  header { height: 40px; }
+  .logo { font-size: 14px; }
+  .status-bar .message { font-size: 12px; padding: 0 8px; }
+  .hand-label { display: none; }
+  .tile-btn { padding: 4px 7px; font-size: 10px; }
+  .btn { padding: 5px 12px; font-size: 12px; }
+  .plr-card { padding: 5px 8px; }
+  .plr-name { font-size: 12px; }
+  .plr-cash { font-size: 11px; }
+  .stock-tbl { font-size: 11px; }
+  .stock-tbl th { font-size: 9px; }
+  .modal { padding: 14px; }
+  .modal h2 { font-size: 15px; }
+  .modal p { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const CHAINS=['tower','luxor','american','worldwide','festival','imperial','continental'];
+const CL={tower:'Tower',luxor:'Luxor',american:'American',worldwide:'Worldwide',festival:'Festival',imperial:'Imperial',continental:'Continental'};
+const CLetter={tower:'T',luxor:'L',american:'A',worldwide:'W',festival:'F',imperial:'I',continental:'C'};
+const CT={tower:0,luxor:0,american:1,worldwide:1,festival:1,imperial:2,continental:2};
+const CTierLabel={0:'Budget',1:'Standard',2:'Premium'};
+const R=9,C=12,TT=R*C,MS=25,SC=6000;
+const PT=[[200,300,400,500,600,700,800,900,1000],[300,400,500,600,700,800,900,1000,1100],[400,500,600,700,800,900,1000,1100,1200]];
+function si(s){if(s<=1)return-1;if(s<=5)return s-2;if(s<=10)return 4;if(s<=20)return 5;if(s<=30)return 6;if(s<=40)return 7;return 8;}
+function sp(c,s){const i=si(s);return i<0?0:PT[CT[c]][i];}
+function majB(c,s){return sp(c,s)*10;}
+function minB(c,s){return sp(c,s)*5;}
+function tl(i){return`${i%C+1}${String.fromCharCode(65+Math.floor(i/C))}`;}
+function shuf(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+function adj(i){const r=Math.floor(i/C),c=i%C,a=[];if(r>0)a.push(i-C);if(r<R-1)a.push(i+C);if(c>0)a.push(i-1);if(c<C-1)a.push(i+1);return a;}
+
+let S=null;
+function newGame(names){
+  const bag=Array.from({length:TT},(_,i)=>i);shuf(bag);
+  const pl=names.map(n=>({name:n,cash:SC,stocks:{},hand:[]}));
+  CHAINS.forEach(c=>pl.forEach(p=>p.stocks[c]=0));
+  // Place one starting tile per player
+  const board=new Array(TT).fill(null);
+  const startTiles=[];
+  pl.forEach((p,i)=>{
+    if(bag.length){const t=bag.pop();board[t]='placed';startTiles.push({name:p.name,tile:t});}
+  });
+  // Deal 6 tiles to each player
+  pl.forEach(p=>{for(let i=0;i<6;i++)if(bag.length)p.hand.push(bag.pop());p.hand.sort((a,b)=>a-b);});
+  // Random starting player
+  const cp=Math.floor(Math.random()*pl.length);
+  const st={board,chains:{},ca:{},sb:{},bag,pl,cp,phase:'place',msg:'Place a tile.',log:[],pm:null,pft:null,pfa:null};
+  startTiles.forEach(x=>st.log.push(`${x.name} drew starting tile ${tl(x.tile)}.`));
+  st.log.push(`${pl[cp].name} goes first.`);
+  return st;
+}
+function initC(s){CHAINS.forEach(c=>{s.chains[c]=new Set();s.ca[c]=false;s.sb[c]=MS;});}
+function cs(c){return S.chains[c]?S.chains[c].size:0;}
+function safe(c){return cs(c)>=11;}
+function avC(){return CHAINS.filter(c=>!S.ca[c]);}
+function acC(){return CHAINS.filter(c=>S.ca[c]);}
+function dead(i){const a=adj(i);const ac=new Set();a.forEach(x=>{const v=S.board[x];if(v&&v!=='placed'&&S.ca[v])ac.add(v);});return[...ac].filter(c=>safe(c)).length>=2;}
+function cpn(){return S.pl[S.cp].name;}
+function log(m){S.log.push(m);}
+
+function place(idx){
+  const a=adj(idx),ac=new Set(),ap=[];
+  a.forEach(x=>{const v=S.board[x];if(v==='placed')ap.push(x);else if(v&&v!=='placed'&&S.ca[v])ac.add(v);});
+  const cl=[...ac];
+  if(cl.length===0){
+    if(ap.length>0){const av=avC();if(av.length===0){S.board[idx]='placed';log(`${cpn()} placed ${tl(idx)}.`);}
+      else{S.board[idx]='placed';S.pft=idx;S.pfa=ap;if(av.length===1)found(av[0]);else{S.phase='found';S.msg='Choose a chain to found.';}return;}}
+    else{S.board[idx]='placed';log(`${cpn()} placed ${tl(idx)}.`);}
+    toBuy();
+  }else if(cl.length===1){
+    const c=cl[0];S.board[idx]=c;S.chains[c].add(idx);
+    ap.forEach(x=>{S.board[x]=c;S.chains[c].add(x);});
+    log(`${cpn()} grew ${CL[c]} to ${cs(c)}.`);toBuy();
+  }else{S.board[idx]='placed';startMerge(idx,cl,ap);}
+}
+
+function found(c){
+  const idx=S.pft,ap=S.pfa;S.ca[c]=true;S.chains[c]=new Set([idx]);S.board[idx]=c;
+  ap.forEach(a=>{S.board[a]=c;S.chains[c].add(a);});
+  let ch=true;while(ch){ch=false;S.chains[c].forEach(t=>{adj(t).forEach(a=>{if(S.board[a]==='placed'){S.board[a]=c;S.chains[c].add(a);ch=true;}});});}
+  const p=S.pl[S.cp];if(S.sb[c]>0){p.stocks[c]++;S.sb[c]--;}
+  log(`${cpn()} founded ${CL[c]} (size ${cs(c)}). Free share awarded.`);
+  S.pft=null;S.pfa=null;toBuy();
+}
+
+function startMerge(t,cl,ap){
+  cl.sort((a,b)=>cs(b)-cs(a));const lg=cs(cl[0]),w=cl.filter(c=>cs(c)===lg);
+  S.pm={tt:t,cl,ap,w:null,df:[],cd:0,cd2:0,dp:[]};
+  if(w.length===1){S.pm.w=w[0];S.pm.df=cl.filter(c=>c!==w[0]);S.pm.df.sort((a,b)=>cs(b)-cs(a));startDR();}
+  else{S.phase='mergeWin';S.msg='Tied chains — choose the surviving chain.';S.pm.tw=w;}
+}
+function pickWin(c){const m=S.pm;m.w=c;m.df=m.cl.filter(x=>x!==c);m.df.sort((a,b)=>cs(b)-cs(a));m.tw=null;startDR();}
+function startDR(){const m=S.pm;if(m.cd>=m.df.length){finMerge();return;}payB(m.df[m.cd]);m.cd2=S.cp;m.dp=[];promptDisp();}
+
+function payB(c){
+  const s=cs(c),maj=majB(c,s),min=minB(c,s);
+  let h=S.pl.map((p,i)=>({i,s:p.stocks[c]})).filter(x=>x.s>0);h.sort((a,b)=>b.s-a.s);
+  if(!h.length)return;
+  if(h.length===1){S.pl[h[0].i].cash+=maj+min;log(`${S.pl[h[0].i].name} receives $${(maj+min).toLocaleString()} bonus (${CL[c]}).`);return;}
+  const ts=h[0].s,mh=h.filter(x=>x.s===ts);
+  if(mh.length>1){const sp2=Math.floor((maj+min)/mh.length/100)*100;mh.forEach(x=>{S.pl[x.i].cash+=sp2;log(`${S.pl[x.i].name} receives $${sp2.toLocaleString()} (tied majority, ${CL[c]}).`);});}
+  else{S.pl[mh[0].i].cash+=maj;log(`${S.pl[mh[0].i].name} receives $${maj.toLocaleString()} majority (${CL[c]}).`);
+    const rem=h.filter(x=>x.s!==ts);if(rem.length>0){const ss=rem[0].s,mih=rem.filter(x=>x.s===ss),sp2=Math.floor(min/mih.length/100)*100;mih.forEach(x=>{S.pl[x.i].cash+=sp2;log(`${S.pl[x.i].name} receives $${sp2.toLocaleString()} minority (${CL[c]}).`);});}
+    else S.pl[mh[0].i].cash+=min;}
+}
+
+function promptDisp(){const m=S.pm,dc=m.df[m.cd],p=S.pl[m.cd2];if(p.stocks[dc]===0){advDisp();return;}S.phase='dispose';S.msg=`${p.name}: dispose of ${CL[dc]} shares.`;}
+function subDisp(sell,trade){
+  const m=S.pm,dc=m.df[m.cd],p=S.pl[m.cd2],s=cs(dc),pr=sp(dc,s);
+  if(sell+trade*2>p.stocks[dc])return;if(trade>0&&S.sb[m.w]<trade)return;
+  if(sell>0){p.cash+=sell*pr;p.stocks[dc]-=sell;S.sb[dc]+=sell;log(`${p.name} sold ${sell} ${CL[dc]} for $${(sell*pr).toLocaleString()}.`);}
+  if(trade>0){p.stocks[dc]-=trade*2;S.sb[dc]+=trade*2;p.stocks[m.w]+=trade;S.sb[m.w]-=trade;log(`${p.name} traded ${trade*2} ${CL[dc]} for ${trade} ${CL[m.w]}.`);}
+  const k=p.stocks[dc];if(k>0)log(`${p.name} held ${k} ${CL[dc]}.`);advDisp();
+}
+function advDisp(){
+  const m=S.pm;let n=(m.cd2+1)%S.pl.length,ck=0;
+  while(ck<S.pl.length){if(S.pl[n].stocks[m.df[m.cd]]>0&&!m.dp.includes(n)){m.cd2=n;m.dp.push(n);promptDisp();return;}n=(n+1)%S.pl.length;ck++;}
+  m.cd++;if(m.cd<m.df.length){m.dp=[];startDR();}else finMerge();
+}
+function finMerge(){
+  const m=S.pm,w=m.w;
+  m.df.forEach(dc=>{S.chains[dc].forEach(t=>{S.board[t]=w;S.chains[w].add(t);});S.chains[dc]=new Set();S.ca[dc]=false;});
+  S.board[m.tt]=w;S.chains[w].add(m.tt);
+  m.ap.forEach(t=>{S.board[t]=w;S.chains[w].add(t);});
+  let ch=true;while(ch){ch=false;S.chains[w].forEach(t=>{adj(t).forEach(a=>{if(S.board[a]==='placed'){S.board[a]=w;S.chains[w].add(a);ch=true;}});});}
+  log(`Merger complete. ${CL[w]} is now size ${cs(w)}.`);S.pm=null;toBuy();
+}
+
+function toBuy(){
+  if(canEnd()){S.phase='buy';S.msg='Buy up to 3 shares. You may end the game.';ba={};S._bm=true;return;}
+  const ch=acC();if(!ch.length){endTurn();return;}
+  const p=S.pl[S.cp];if(!ch.some(c=>{const pr=sp(c,cs(c));return pr>0&&pr<=p.cash&&S.sb[c]>0;})){log(`${cpn()} cannot afford shares.`);endTurn();return;}
+  S.phase='buy';S.msg='Buy up to 3 shares.';ba={};S._bm=true;
+}
+function canEnd(){const a=acC();if(!a.length)return false;return a.every(c=>safe(c))||a.some(c=>cs(c)>=41);}
+function buyS(pur){
+  const p=S.pl[S.cp];let tot=0,cnt=0;
+  for(const[c,n]of Object.entries(pur)){if(n<=0)continue;tot+=sp(c,cs(c))*n;cnt+=n;}
+  if(cnt>3||tot>p.cash)return;
+  for(const[c,n]of Object.entries(pur)){if(n<=0)continue;const pr=sp(c,cs(c));p.cash-=pr*n;p.stocks[c]+=n;S.sb[c]-=n;log(`${cpn()} bought ${n} ${CL[c]} at $${pr}.`);}
+  endTurn();
+}
+function endTurn(){
+  const p=S.pl[S.cp];while(p.hand.length<6&&S.bag.length>0)p.hand.push(S.bag.pop());p.hand.sort((a,b)=>a-b);
+  let rp=true;while(rp){rp=false;for(let i=p.hand.length-1;i>=0;i--)if(dead(p.hand[i])){p.hand.splice(i,1);if(S.bag.length>0){p.hand.push(S.bag.pop());rp=true;}}p.hand.sort((a,b)=>a-b);}
+  S.cp=(S.cp+1)%S.pl.length;S.phase='place';S.msg='Place a tile.';
+  const cp2=S.pl[S.cp];if(cp2.hand.length>0&&!cp2.hand.some(t=>!dead(t))){log(`${cpn()} has no playable tiles.`);endTurn();}
+}
+function endGame(){
+  acC().forEach(c=>{payB(c);const s=cs(c),pr=sp(c,s);S.pl.forEach(p=>{if(p.stocks[c]>0){const v=p.stocks[c]*pr;p.cash+=v;log(`${p.name} sold ${p.stocks[c]} ${CL[c]} for $${v.toLocaleString()}.`);S.sb[c]+=p.stocks[c];p.stocks[c]=0;}});});
+  S.phase='over';S.msg='Game Over.';log('Game over.');
+}
+
+// ═══ RENDER ═══
+const app=document.getElementById('app');
+let spc=3,sn=['','',''],sel=null,ba={},ms=0,mt=0;
+
+function rSetup(){
+  app.innerHTML=`<div class="setup"><div class="setup-box"><h1>Acquire</h1><p class="sub">A game of high finance and hotel chains</p><div class="divider"></div><label>Players</label><div class="count-btns">${[2,3,4,5,6].map(n=>`<button class="count-btn ${n===spc?'sel':''}" onclick="setSPC(${n})">${n}</button>`).join('')}</div><div class="name-fields">${sn.map((n,i)=>`<input value="${n}" placeholder="Player ${i+1}" onchange="sn[${i}]=this.value"/>`).join('')}</div><button class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;" onclick="go()">Start Game</button></div></div>`;
+}
+window.setSPC=function(n){spc=n;while(sn.length<n)sn.push('');sn=sn.slice(0,n);rSetup();};
+window.go=function(){const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);S=newGame(names);initC(S);S.msg=`${cpn()}, place a tile.`;sel=null;render();};
+
+function render(){
+  if(!S){rSetup();return;}if(S.phase==='over'){rOver();return;}
+  const p=S.pl[S.cp];
+  app.innerHTML=`<header><div class="logo">Acquire</div><div class="header-right"><span class="tiles-remaining">${S.bag.length} tiles remaining</span>${canEnd()&&S.phase==='buy'?'<button class="btn-end" onclick="doEnd()">End Game</button>':''}<button onclick="rules()">Rules</button></div></header>
+<div class="status-bar"><div class="turn">${cpn()}</div><div class="message">${S.msg}</div><div class="phase-tag">${S.phase==='place'?'Place Tile':S.phase==='buy'?'Buy Stock':S.phase}</div></div>
+<div class="game-layout"><div class="main-col"><div class="board-area"><div class="board-frame"><div class="board">${rBoard()}</div></div></div>
+<div class="hand-bar"><div class="hand-tiles"><span class="hand-label">Hand</span>${p.hand.map(t=>{const d=dead(t),s2=sel===t;return`<button class="tile-btn ${s2?'selected':''} ${d?'dead':''}" onclick="${d?'':'selTile('+t+')'}">${tl(t)}</button>`;}).join('')}</div>
+<div class="hand-actions">${S.phase==='place'?'<span class="hint-text">Select a tile to place</span>':''}${S.phase==='buy'?`<button class="btn btn-primary" onclick="openBuy()">Buy Shares</button><button class="btn" onclick="skipBuy()">Pass</button>`:''}</div></div></div>
+<div class="sidebar"><div class="sb-section"><div class="sb-title">Stock Market</div>${rStocks()}</div>
+<div class="sb-section"><div class="sb-title">Players</div>${S.pl.map((p2,i)=>rPlr(p2,i)).join('')}</div>
+<div class="sb-section" style="border-bottom:none;padding-bottom:4px;"><div class="sb-title">Log</div></div>
+<div class="log-box">${S.log.slice().reverse().map(l=>`<div>${l}</div>`).join('')}</div></div></div>${rModal()}`;
+}
+
+function rBoard(){
+  let h='';const ph=S.pl[S.cp].hand;
+  // Find center tile for each active chain
+  const centerTiles=new Set();
+  CHAINS.forEach(c=>{
+    if(!S.ca[c]||S.chains[c].size===0)return;
+    const tiles=[...S.chains[c]];
+    // Compute centroid
+    let sr=0,sc2=0;tiles.forEach(t=>{sr+=Math.floor(t/C);sc2+=t%C;});
+    sr/=tiles.length;sc2/=tiles.length;
+    // Find closest tile to centroid
+    let best=tiles[0],bestD=Infinity;
+    tiles.forEach(t=>{const r=Math.floor(t/C),c3=t%C,d=(r-sr)*(r-sr)+(c3-sc2)*(c3-sc2);if(d<bestD){bestD=d;best=t;}});
+    centerTiles.add(best);
+  });
+  for(let i=0;i<TT;i++){const v=S.board[i];let c='cell';let label=tl(i);if(v==='placed'){c+=' placed';}else if(v&&v!=='placed'){c+=` placed chain-${v}`;if(centerTiles.has(i)){label=CLetter[v];c+=' chain-center';}else{label='';}}if(S.phase==='place'&&v===null&&ph.includes(i)&&!dead(i))c+=' playable';h+=`<div class="${c}" onclick="clickC(${i})">${label}</div>`;}return h;
+}
+
+function rStocks(){
+  const tiers=[
+    {label:'Budget',chains:['tower','luxor']},
+    {label:'Standard',chains:['american','worldwide','festival']},
+    {label:'Premium',chains:['imperial','continental']}
+  ];
+  let rows='';
+  tiers.forEach((tier,ti)=>{
+    rows+=`<tr><td colspan="4" style="padding:${ti>0?'6px':'2px'} 0 2px;font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;border-bottom:none;">${tier.label} <span style="font-weight:500;text-transform:none;letter-spacing:0;">— $${PT[ti][0]} base</span></td></tr>`;
+    tier.chains.forEach(c=>{const a=S.ca[c],s=cs(c),pr=a?sp(c,s):0,sf=safe(c);
+      rows+=`<tr class="${a?'':'inactive'}"><td><span class="chain-swatch" style="background:var(--${c})">${CLetter[c]}</span><span class="chain-nm">${CL[c]}</span>${sf?'<span class="safe-tag">SAFE</span>':''}</td><td class="stock-num">${a?s:'—'}</td><td class="stock-num stock-price">${a?'$'+pr:'—'}</td><td class="stock-num">${S.sb[c]}</td></tr>`;
+    });
+  });
+  return`<table class="stock-tbl"><tr><th>Chain</th><th>Size</th><th>Price</th><th>Avail</th></tr>${rows}</table>`;
+}
+
+function rPlr(p,i){
+  const a=i===S.cp,st=CHAINS.filter(c=>p.stocks[c]>0).map(c=>`<span class="plr-chip" style="background:var(--${c}-bg);color:var(--${c});border-color:var(--${c})">${p.stocks[c]} ${CL[c].substring(0,3)}</span>`).join('');
+  return`<div class="plr-card ${a?'active':''}"><div class="plr-top"><span class="plr-name">${a?'► ':''}${p.name}</span><span class="plr-cash">$${p.cash.toLocaleString()}</span></div><div class="plr-stocks">${st||'<span style="font-size:10px;color:var(--text-light)">—</span>'}</div></div>`;
+}
+
+function rModal(){
+  if(S.phase==='found'){const av=avC();return`<div class="modal-overlay"><div class="modal"><h2>Found a Chain</h2><p>Your tile connected adjacent tiles. Choose a hotel chain to establish.</p><p style="font-size:12px;color:var(--text-light);">Budget chains are cheaper to buy but pay less in mergers. Premium chains cost more but pay big bonuses.</p><div class="chain-grid">${av.map(c=>`<div class="chain-opt" onclick="pickC('${c}')"><div class="sw" style="background:var(--${c})">${CLetter[c]}</div><div><div>${CL[c]}</div><div style="font-size:10px;font-weight:500;color:var(--text-light)">${CTierLabel[CT[c]]}</div></div><span class="cprice">$${PT[CT[c]][0]}</span></div>`).join('')}</div></div></div>`;}
+  if(S.phase==='mergeWin'){const tw=S.pm.tw;return`<div class="modal-overlay"><div class="modal"><h2>Merger — Choose Survivor</h2><p>These chains are tied. Select which chain survives.</p><div class="chain-grid">${tw.map(c=>`<div class="chain-opt" onclick="pickW('${c}')"><div class="sw" style="background:var(--${c})">${CLetter[c]}</div>${CL[c]}<span class="cprice">${cs(c)} tiles</span></div>`).join('')}</div></div></div>`;}
+  if(S.phase==='dispose')return rDisp();
+  if(S._bm)return rBuy();
+  return'';
+}
+
+function rBuy(){
+  const p=S.pl[S.cp],ch=acC().filter(c=>S.sb[c]>0);let tc=0,tn=0;
+  ch.forEach(c=>{const a=ba[c]||0;tc+=a*sp(c,cs(c));tn+=a;});
+  return`<div class="modal-overlay" onclick="skipBuy()"><div class="modal" onclick="event.stopPropagation()"><h2>Buy Shares</h2><p>Up to <strong>3 shares</strong> total. Cash: <strong>$${p.cash.toLocaleString()}</strong></p>${!ch.length?'<p style="color:var(--text-light)">No shares available.</p>':''}${ch.map(c=>{const pr=sp(c,cs(c)),a=ba[c]||0,mx=Math.min(3-tn+a,S.sb[c],Math.floor((p.cash-tc+a*pr)/pr));return`<div class="buy-row"><div class="buy-info"><span class="chain-swatch" style="background:var(--${c})">${CLetter[c]}</span><div><div>${CL[c]}</div><div style="font-size:9px;font-weight:500;color:var(--text-light)">${CTierLabel[CT[c]]}</div></div><span class="buy-price">$${pr}</span></div><div class="buy-ctrl"><button onclick="adjB('${c}',-1)" ${a<=0?'disabled':''}>−</button><span class="buy-cnt">${a}</span><button onclick="adjB('${c}',1)" ${a>=mx?'disabled':''}>+</button></div></div>`;}).join('')}<div class="buy-total">${tn}/3 shares · $${tc.toLocaleString()}</div><div class="modal-actions"><button class="btn" onclick="skipBuy()">Pass</button><button class="btn btn-primary" onclick="confBuy()">Buy</button></div></div></div>`;
+}
+
+function rDisp(){
+  const m=S.pm,dc=m.df[m.cd],p=S.pl[m.cd2],sh=p.stocks[dc],s=cs(dc),pr=sp(dc,s),wa=S.sb[m.w],mxt=Math.min(Math.floor(sh/2),wa);
+  return`<div class="modal-overlay"><div class="modal"><h2>Dispose — ${CL[dc]}</h2><p><strong>${p.name}</strong> holds <strong>${sh}</strong> shares of ${CL[dc]} at $${pr}/share. Trade 2:1 for ${CL[m.w]} or sell.</p><div class="disp-row"><label>Sell:</label><input type="number" id="ds" min="0" max="${sh}" value="${ms}" oninput="uDisp()"/></div><div class="disp-row"><label>Trade 2:1:</label><input type="number" id="dt" min="0" max="${mxt}" value="${mt}" oninput="uDisp()"/></div><div class="disp-keep">Holding: <strong id="dk">${Math.max(0,sh-ms-mt*2)}</strong></div><div class="modal-actions"><button class="btn btn-primary" onclick="confDisp()">Confirm</button></div></div></div>`;
+}
+
+function rOver(){
+  const sorted=[...S.pl].sort((a,b)=>b.cash-a.cash),w=sorted[0];
+  app.innerHTML=`<div class="gameover"><h1>Game Over</h1><div class="winner">${w.name} — $${w.cash.toLocaleString()}</div><div class="standings">${sorted.map((p,i)=>`<div class="st-row ${i===0?'first':''}"><span class="rank">${i+1}.</span><span>${p.name}</span><span class="st-cash">$${p.cash.toLocaleString()}</span></div>`).join('')}</div><button class="btn btn-primary" style="padding:10px 32px;" onclick="S=null;rSetup();">New Game</button></div>`;
+}
+
+// Events
+window.selTile=function(t){if(S.phase!=='place')return;if(sel===t){S.pl[S.cp].hand=S.pl[S.cp].hand.filter(x=>x!==t);sel=null;place(t);render();return;}sel=t;render();};
+window.clickC=function(i){if(S.phase!=='place')return;const p=S.pl[S.cp];if(!p.hand.includes(i)||dead(i))return;p.hand=p.hand.filter(t=>t!==i);sel=null;place(i);render();};
+window.pickC=function(c){if(S.phase!=='found')return;found(c);render();};
+window.pickW=function(c){if(S.phase!=='mergeWin')return;pickWin(c);render();};
+window.openBuy=function(){ba={};S._bm=true;render();};
+window.clBuy=function(e){if(e.target===e.currentTarget){S._bm=false;render();}};
+window.clBuyA=function(){S._bm=false;render();};
+window.adjB=function(c,d){if(!ba[c])ba[c]=0;ba[c]=Math.max(0,ba[c]+d);let t=Object.values(ba).reduce((a,b)=>a+b,0);if(t>3)ba[c]-=(t-3);render();};
+window.confBuy=function(){S._bm=false;buyS(ba);render();};
+window.skipBuy=function(){S._bm=false;log(`${cpn()} passed.`);endTurn();render();};
+window.uDisp=function(){ms=parseInt(document.getElementById('ds').value)||0;mt=parseInt(document.getElementById('dt').value)||0;const m=S.pm,sh=S.pl[m.cd2].stocks[m.df[m.cd]];document.getElementById('dk').textContent=Math.max(0,sh-ms-mt*2);};
+window.confDisp=function(){ms=parseInt(document.getElementById('ds').value)||0;mt=parseInt(document.getElementById('dt').value)||0;subDisp(ms,mt);ms=0;mt=0;render();};
+window.doEnd=function(){endGame();render();};
+
+window.rules=function(){
+  const o=document.createElement('div');o.className='modal-overlay';o.onclick=e=>{if(e.target===o)o.remove();};
+  o.innerHTML=`<div class="modal" style="max-width:520px;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()"><h2>How to Play</h2><p><strong>Objective:</strong> Finish with the most money.</p><p><strong>Each turn:</strong> (1) Place a tile. (2) Buy up to 3 shares. (3) Draw a replacement tile.</p><p><strong>Founding:</strong> When your tile connects two or more independent tiles, you establish a new hotel chain and receive one free share.</p><p><strong>Mergers:</strong> When a tile bridges two chains, the larger absorbs the smaller. Majority and minority shareholders of the defunct chain receive bonuses. You may sell shares, trade them 2-for-1 into the surviving chain, or hold.</p><p><strong>Safe chains:</strong> A chain with 11 or more tiles cannot be acquired.</p><p><strong>Game end:</strong> Any player may end the game when all active chains are safe or any chain has 41+ tiles. All shares are liquidated at current prices.</p><p><strong>Pricing:</strong> Shares cost more as chains grow. Tower and Luxor are the cheapest tier; American, Worldwide, and Festival are mid-tier; Imperial and Continental are premium.</p><div class="modal-actions"><button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Close</button></div></div>`;
+  document.body.appendChild(o);
+};
+
+rSetup();
+</script>
+</body>
+</html>
