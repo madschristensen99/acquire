@@ -1,10 +1,11 @@
 # Acquire Game - Fhenix FHE Implementation
 
-A blockchain implementation of the classic Acquire board game using Fhenix's Fully Homomorphic Encryption (FHE) to keep player hands and cash private.
+A blockchain implementation of the classic Acquire board game using Fhenix's Fully Homomorphic Encryption (FHE) to keep player hands and shares private.
 
 ## Features
 
-- **Private Player Data**: Player tiles, cash, and shares are encrypted using FHE
+- **Private Player Data**: Player tiles and shares are encrypted using FHE
+- **Public Cash Balances**: Player cash is publicly visible for transparency
 - **On-chain Game Logic**: All game rules enforced by smart contract
 - **2-6 Players**: Supports standard Acquire player count
 - **Hotel Chain Management**: Form and manage hotel chains on a 12x9 board
@@ -13,7 +14,7 @@ A blockchain implementation of the classic Acquire board game using Fhenix's Ful
 ## Game Mechanics
 
 The contract implements core Acquire gameplay:
-- Players join the game and receive initial cash (encrypted)
+- Players join the game and receive initial cash (6000)
 - Each player gets 6 random tiles (encrypted)
 - Players take turns placing tiles on the board
 - Adjacent tiles form hotel chains
@@ -55,7 +56,7 @@ npm run deploy:local
 
 ### Key Components
 
-- **Player**: Stores encrypted player data (cash, tiles, shares)
+- **Player**: Stores player data (public cash, encrypted tiles and shares)
 - **BoardTile**: Represents board state with encrypted hotel chain info
 - **GameState**: Tracks game progress and current player
 
@@ -65,19 +66,18 @@ npm run deploy:local
 - `startGame()`: Initialize the game with 2-6 players
 - `placeTile()`: Place a tile on the board (encrypted tile index)
 - `purchaseShares()`: Buy shares in a hotel chain (encrypted)
-- `getPlayerCash()`: View your encrypted cash balance
+- `getPlayerCash()`: View any player's cash balance (public)
 - `getPlayerShares()`: View your encrypted share holdings
 - `getPlayerTile()`: View one of your encrypted tiles
 
 ## Privacy Features
 
-All sensitive player data is encrypted using Fhenix FHE:
-- Player cash balances
-- Tile holdings
-- Share counts
+Sensitive player data is encrypted using Fhenix FHE:
+- Tile holdings (private)
+- Share counts (private)
 - Board state (hotel chains)
 
-Players can only decrypt their own data using permission-based access control.
+Player cash balances are public for game transparency. Players can only decrypt their own encrypted data using permission-based access control.
 
 ## Technology Stack
 

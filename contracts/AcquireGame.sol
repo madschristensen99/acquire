@@ -15,7 +15,7 @@ contract AcquireGame is Permissioned {
     
     struct Player {
         address playerAddress;
-        euint32 cash;
+        uint32 cash;
         euint8[TILES_PER_PLAYER] tiles;
         euint8[MAX_HOTEL_CHAINS] shares;
         bool isActive;
@@ -62,7 +62,7 @@ contract AcquireGame is Permissioned {
         uint256 playerId = gameState.playerCount;
         
         players[playerId].playerAddress = msg.sender;
-        players[playerId].cash = FHE.asEuint32(6000);
+        players[playerId].cash = 6000;
         players[playerId].isActive = true;
         
         for (uint8 i = 0; i < MAX_HOTEL_CHAINS; i++) {
@@ -171,25 +171,25 @@ contract AcquireGame is Permissioned {
         euint8 chainId = FHE.asEuint8(encryptedChainId);
         euint32 amount = FHE.asEuint32(encryptedAmount);
         
-        euint32 shareCost = FHE.mul(amount, FHE.asEuint32(100));
+        uint32 decryptedAmount = FHE.decrypt(amount);
+        uint32 shareCost = decryptedAmount * 100;
         
-        players[playerId].cash = FHE.sub(players[playerId].cash, shareCost);
+        require(players[playerId].cash >= shareCost, "Insufficient cash");
+        players[playerId].cash -= shareCost;
         players[playerId].shares[FHE.decrypt(chainId)] = FHE.add(
             players[playerId].shares[FHE.decrypt(chainId)], 
-            FHE.asEuint8(FHE.decrypt(amount))
+            FHE.asEuint8(decryptedAmount)
         );
         
-        emit SharesPurchased(playerId, FHE.decrypt(chainId), FHE.decrypt(amount));
+        emit SharesPurchased(playerId, FHE.decrypt(chainId), decryptedAmount);
     }
     
-    function getPlayerCash(uint256 playerId, Permission calldata permission) 
+    function getPlayerCash(uint256 playerId) 
         external 
         view 
-        onlySender(permission) 
-        returns (string memory) 
+        returns (uint32) 
     {
-        require(players[playerId].playerAddress == msg.sender, "Not your data");
-        return FHE.sealoutput(players[playerId].cash, permission.publicKey);
+        return players[playerId].cash;
     }
     
     function getPlayerShares(uint256 playerId, uint8 chainId, Permission calldata permission) 
