@@ -1,0 +1,29 @@
+{
+  "name": "acquire-fhenix",
+  "version": "1.0.0",
+  "description": "Acquire board game using Fhenix FHE",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js --network fhenix",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost"
+  },
+  "keywords": [
+    "fhenix",
+    "fhe",
+    "acquire",
+    "blockchain",
+    "game"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0"
+  },
+  "dependencies": {
+    "@fhenixprotocol/contracts": "^0.2.0",
+    "dotenv": "^16.3.1"
+  }
+}
