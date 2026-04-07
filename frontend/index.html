@@ -3,8 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Play Acquire board game on the blockchain with FHE privacy">
+<meta name="theme-color" content="#3b3028">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Acquire">
+<link rel="icon" type="image/svg+xml" href="/icons/icon-192x192.svg">
 <title>ACQUIRE</title>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@dynamic-labs/sdk-react-core@2/dist/DynamicSDK.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@dynamic-labs/ethereum@2/dist/DynamicEthereum.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
 <style>
 :root {
   --bg: #f5f0e8;
@@ -20,21 +32,21 @@
   --red: #c0392b;
   --green-dark: #1a5e3a;
 
-  /* Chains — rich and readable */
-  --tower: #d63031;
-  --tower-bg: #fadbd8;
-  --luxor: #27ae60;
-  --luxor-bg: #d5f5e3;
-  --american: #2980b9;
-  --american-bg: #d4e6f1;
-  --worldwide: #8e44ad;
-  --worldwide-bg: #e8daef;
-  --festival: #16a085;
-  --festival-bg: #d0ece7;
-  --imperial: #d4a017;
-  --imperial-bg: #fef3cd;
-  --continental: #e67e22;
-  --continental-bg: #fdebd0;
+  /* Chains — authentic Acquire board game colors */
+  --luxor: #dc143c;
+  --luxor-bg: #fce4e4;
+  --tower: #ffd700;
+  --tower-bg: #fffacd;
+  --american: #1e90ff;
+  --american-bg: #e6f2ff;
+  --festival: #228b22;
+  --festival-bg: #e8f5e9;
+  --worldwide: #8b4789;
+  --worldwide-bg: #f3e5f5;
+  --continental: #00ced1;
+  --continental-bg: #e0f7fa;
+  --imperial: #ff1493;
+  --imperial-bg: #ffe4f1;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -55,7 +67,7 @@ header {
   justify-content: space-between;
   padding: 0 24px;
   height: 48px;
-  border-bottom: 3px solid var(--imperial);
+  border-bottom: 3px solid #2a2420;
 }
 .logo {
   font-family: 'Libre Baskerville', serif;
@@ -186,17 +198,17 @@ header {
 }
 .cell.playable {
   background: #fff8e8;
-  border: 2px solid var(--imperial);
+  border: 2px solid var(--bg-header);
   color: var(--text);
   cursor: pointer;
   font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(60, 53, 48, 0.2);
 }
 .cell.playable:hover {
-  background: var(--imperial);
+  background: var(--bg-header);
   color: white;
   transform: scale(1.08);
-  z-index: 2;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(60, 53, 48, 0.3);
 }
 .cell.chain-tower { background: var(--tower); border-color: var(--tower); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
 .cell.chain-luxor { background: var(--luxor); border-color: var(--luxor); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
@@ -206,6 +218,8 @@ header {
 .cell.chain-imperial { background: var(--imperial); border-color: var(--imperial); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
 .cell.chain-continental { background: var(--continental); border-color: var(--continental); color: #fff; font-weight: 700; font-size: 13px; font-family: 'Libre Baskerville', serif; }
 .cell.chain-center { font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+/* Ownership indicators removed from board - check stock table for ownership info */
 
 /* ── HAND BAR ── */
 .hand-bar {
@@ -324,13 +338,25 @@ header {
 }
 .stock-tbl td { padding: 4px; border-bottom: 1px solid #ece5d9; }
 .stock-tbl tr.inactive td { opacity: 0.3; }
+.stock-tbl tr.owned-light { border-left: 3px solid currentColor; }
+.stock-tbl tr.owned-medium { border-left: 3px solid currentColor; }
+.stock-tbl tr.owned-heavy { border-left: 3px solid currentColor; }
 .chain-swatch {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; margin-right: 6px;
-  border-radius: 3px; vertical-align: middle;
-  color: #fff; font-family: 'Libre Baskerville', serif;
-  font-size: 11px; font-weight: 700;
+  border-radius: 3px; font-size: 10px; font-weight: 700;
+  color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
+.chain-swatch.owned-light {
+  box-shadow: 0 0 4px currentColor;
+}
+.chain-swatch.owned-medium {
+  box-shadow: 0 0 6px currentColor;
+}
+.chain-swatch.owned-heavy {
+  box-shadow: 0 0 8px currentColor;
+}
+
 .chain-nm { font-weight: 600; }
 .stock-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; }
 .stock-price { color: var(--green-dark); }
@@ -468,22 +494,65 @@ header {
 }
 
 /* Dispose */
-.disp-row {
-  display: flex; align-items: center; justify-content: space-between; padding: 6px 0;
+.merger-info {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px; margin-bottom: 16px;
 }
-.disp-row label { font-size: 13px; font-weight: 500; color: var(--text-mid); }
-.disp-row input {
-  width: 52px; background: var(--bg); border: 1px solid var(--border-dark);
-  color: var(--text); padding: 4px 6px;
-  font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: center;
-  border-radius: 4px;
+.merger-info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0; font-size: 13px;
 }
-.disp-row input:focus { outline: none; border-color: var(--text); }
-.disp-keep {
-  text-align: center; padding: 6px; background: var(--bg);
-  font-size: 13px; font-weight: 600; color: var(--text-mid);
-  border: 1px solid var(--border); margin-top: 6px;
-  border-radius: 5px;
+.merger-info-label { color: var(--text-mid); font-weight: 500; }
+.merger-info-value { color: var(--text); font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+.disp-option {
+  background: var(--bg-card); border: 2px solid var(--border);
+  border-radius: 8px; padding: 14px; margin-bottom: 12px;
+  transition: all 0.15s;
+}
+.disp-option:hover { border-color: var(--border-dark); }
+.disp-option-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.disp-option-title {
+  font-size: 14px; font-weight: 600; color: var(--text);
+}
+.disp-option-desc {
+  font-size: 12px; color: var(--text-mid); margin-bottom: 10px;
+  line-height: 1.4;
+}
+.disp-controls {
+  display: flex; align-items: center; gap: 8px;
+}
+.disp-controls button {
+  background: var(--bg); border: 1px solid var(--border-dark);
+  color: var(--text); padding: 6px 12px; border-radius: 5px;
+  font-family: 'Source Sans 3', sans-serif; font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.disp-controls button:hover:not(:disabled) {
+  background: var(--bg-board); border-color: var(--text);
+}
+.disp-controls button:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+.disp-count {
+  font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+  font-size: 14px; min-width: 32px; text-align: center;
+}
+.disp-summary {
+  background: var(--imperial-bg); border: 2px solid var(--imperial);
+  border-radius: 8px; padding: 14px; margin-top: 16px;
+}
+.disp-summary-row {
+  display: flex; justify-content: space-between; padding: 4px 0;
+  font-size: 13px;
+}
+.disp-summary-label { font-weight: 500; color: var(--text-mid); }
+.disp-summary-value { font-weight: 700; color: var(--text); font-family: 'IBM Plex Mono', monospace; }
+.disp-summary-total {
+  border-top: 2px solid var(--imperial); margin-top: 8px; padding-top: 8px;
+  font-size: 15px; font-weight: 700;
 }
 
 /* ── SETUP ── */
@@ -536,29 +605,111 @@ header {
 /* Game over */
 .gameover {
   display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 100vh; padding: 40px;
+  justify-content: center; min-height: 100vh; padding: 40px 20px;
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg-board) 100%);
+}
+.gameover-container {
+  max-width: 700px; width: 100%;
 }
 .gameover h1 {
   font-family: 'Libre Baskerville', serif;
-  font-size: 36px; color: var(--text); letter-spacing: 4px; margin-bottom: 8px;
+  font-size: 42px; color: var(--text); letter-spacing: 6px; 
+  text-align: center; margin-bottom: 12px; text-transform: uppercase;
 }
-.gameover .winner {
-  font-size: 18px; font-weight: 700; color: var(--green-dark); margin-bottom: 20px;
+.gameover-subtitle {
+  text-align: center; font-size: 14px; color: var(--text-mid);
+  margin-bottom: 32px; font-weight: 500;
+}
+.winner-banner {
+  background: linear-gradient(135deg, var(--imperial) 0%, var(--continental) 100%);
+  border-radius: 12px; padding: 24px; text-align: center;
+  margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.winner-trophy {
+  font-size: 48px; margin-bottom: 8px;
+}
+.winner-name {
+  font-size: 24px; font-weight: 700; color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;
+}
+.winner-cash {
+  font-size: 32px; font-weight: 700; color: white;
+  font-family: 'IBM Plex Mono', monospace;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 .standings {
   background: var(--bg-card); border: 2px solid var(--border-dark);
-  border-radius: 8px;
-  padding: 16px 20px; min-width: 300px; margin-bottom: 20px;
+  border-radius: 12px; padding: 20px; margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.standings-header {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 2px solid var(--border-dark);
 }
 .st-row {
-  display: flex; justify-content: space-between; padding: 6px 0;
-  border-bottom: 1px solid #ece5d9; font-weight: 600;
+  display: flex; align-items: center; padding: 12px 0;
+  border-bottom: 1px solid var(--border); transition: all 0.15s;
 }
+.st-row:hover { background: var(--bg); margin: 0 -8px; padding: 12px 8px; border-radius: 6px; }
 .st-row:last-child { border-bottom: none; }
-.st-row.first { font-size: 15px; }
-.st-row .rank { width: 28px; color: var(--text-light); font-family: 'IBM Plex Mono', monospace; }
-.st-row.first .rank { color: var(--text); }
-.st-cash { font-family: 'IBM Plex Mono', monospace; color: var(--green-dark); }
+.st-row.first { background: var(--imperial-bg); margin: 0 -8px; padding: 12px 8px; border-radius: 6px; }
+.st-rank {
+  width: 40px; font-size: 18px; font-weight: 700;
+  color: var(--text-light); font-family: 'IBM Plex Mono', monospace;
+  text-align: center;
+}
+.st-row.first .st-rank { color: var(--imperial); font-size: 20px; }
+.st-info { flex: 1; }
+.st-name { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.st-details {
+  font-size: 11px; color: var(--text-mid); font-family: 'IBM Plex Mono', monospace;
+}
+.st-cash {
+  font-family: 'IBM Plex Mono', monospace; font-size: 16px;
+  font-weight: 700; color: var(--green-dark);
+}
+.st-row.first .st-cash { font-size: 18px; }
+.game-stats {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px; margin-bottom: 24px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-value {
+  font-size: 24px; font-weight: 700; color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+}
+.stat-label {
+  font-size: 11px; color: var(--text-mid); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;
+}
+.gameover-actions {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+}
+.gameover-actions button {
+  padding: 12px 24px; font-size: 14px; font-weight: 600;
+  border-radius: 8px; cursor: pointer; transition: all 0.15s;
+  font-family: 'Source Sans 3', sans-serif;
+}
+.btn-new-game {
+  background: var(--imperial); color: white; border: none;
+  box-shadow: 0 2px 8px rgba(212, 160, 23, 0.3);
+}
+.btn-new-game:hover {
+  background: var(--continental); transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 160, 23, 0.4);
+}
+.btn-share {
+  background: var(--bg-card); color: var(--text);
+  border: 2px solid var(--border-dark);
+}
+.btn-share:hover {
+  background: var(--bg-board); border-color: var(--text);
+}
+
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
@@ -634,7 +785,7 @@ header {
 <body>
 <div id="app"></div>
 <script>
-const CHAINS=['tower','luxor','american','worldwide','festival','imperial','continental'];
+const CHAINS=['imperial','continental','american','worldwide','festival','tower','luxor'];
 const CL={tower:'Tower',luxor:'Luxor',american:'American',worldwide:'Worldwide',festival:'Festival',imperial:'Imperial',continental:'Continental'};
 const CLetter={tower:'T',luxor:'L',american:'A',worldwide:'W',festival:'F',imperial:'I',continental:'C'};
 const CT={tower:0,luxor:0,american:1,worldwide:1,festival:1,imperial:2,continental:2};
@@ -664,7 +815,7 @@ function newGame(names){
   pl.forEach(p=>{for(let i=0;i<6;i++)if(bag.length)p.hand.push(bag.pop());p.hand.sort((a,b)=>a-b);});
   // Random starting player
   const cp=Math.floor(Math.random()*pl.length);
-  const st={board,chains:{},ca:{},sb:{},bag,pl,cp,phase:'place',msg:'Place a tile.',log:[],pm:null,pft:null,pfa:null};
+  const st={board,chains:{},ca:{},sb:{},bag,pl,cp,phase:'place',msg:'Place a tile.',log:[],pm:null,pft:null,pfa:null,_bm:false};
   startTiles.forEach(x=>st.log.push(`${x.name} drew starting tile ${tl(x.tile)}.`));
   st.log.push(`${pl[cp].name} goes first.`);
   return st;
@@ -679,6 +830,9 @@ function cpn(){return S.pl[S.cp].name;}
 function log(m){S.log.push(m);}
 
 function place(idx){
+  const p=S.pl[S.cp];
+  const hi=p.hand.indexOf(idx);
+  if(hi!==-1)p.hand.splice(hi,1);
   const a=adj(idx),ac=new Set(),ap=[];
   a.forEach(x=>{const v=S.board[x];if(v==='placed')ap.push(x);else if(v&&v!=='placed'&&S.ca[v])ac.add(v);});
   const cl=[...ac];
@@ -707,7 +861,7 @@ function startMerge(t,cl,ap){
   cl.sort((a,b)=>cs(b)-cs(a));const lg=cs(cl[0]),w=cl.filter(c=>cs(c)===lg);
   S.pm={tt:t,cl,ap,w:null,df:[],cd:0,cd2:0,dp:[]};
   if(w.length===1){S.pm.w=w[0];S.pm.df=cl.filter(c=>c!==w[0]);S.pm.df.sort((a,b)=>cs(b)-cs(a));startDR();}
-  else{S.phase='mergeWin';S.msg='Tied chains — choose the surviving chain.';S.pm.tw=w;}
+  else{S.phase='mergeWin';S.msg='Tied chains - choose the surviving chain.';S.pm.tw=w;}
 }
 function pickWin(c){const m=S.pm;m.w=c;m.df=m.cl.filter(x=>x!==c);m.df.sort((a,b)=>cs(b)-cs(a));m.tw=null;startDR();}
 function startDR(){const m=S.pm;if(m.cd>=m.df.length){finMerge();return;}payB(m.df[m.cd]);m.cd2=S.cp;m.dp=[];promptDisp();}
@@ -747,12 +901,20 @@ function finMerge(){
 }
 
 function toBuy(){
-  if(canEnd()){S.phase='buy';S.msg='Buy up to 3 shares. You may end the game.';ba={};S._bm=true;return;}
-  const ch=acC();if(!ch.length){endTurn();return;}
-  const p=S.pl[S.cp];if(!ch.some(c=>{const pr=sp(c,cs(c));return pr>0&&pr<=p.cash&&S.sb[c]>0;})){log(`${cpn()} cannot afford shares.`);endTurn();return;}
-  S.phase='buy';S.msg='Buy up to 3 shares.';ba={};S._bm=true;
+  const ch=acC();
+  if(!ch.length){endTurn();return;}
+  // Check for mandatory end: any chain >= 41 tiles
+  if(ch.some(c=>cs(c)>=41)){endGame();return;}
+  const p=S.pl[S.cp];
+  const canAfford=ch.some(c=>{const pr=sp(c,cs(c));return pr>0&&pr<=p.cash&&S.sb[c]>0;});
+  // Optional end: all chains are safe (player can choose to end)
+  if(canEnd()){
+    S.phase='buy';S.msg=canAfford?'Buy up to 3 shares. You may end the game.':'You may end the game.';ba={};S._bm=true;return;
+  }
+  // Always show buy modal - player needs to click Pass even if they can't afford
+  S.phase='buy';S.msg=canAfford?'Buy up to 3 shares.':'No shares available in your price range.';ba={};S._bm=true;
 }
-function canEnd(){const a=acC();if(!a.length)return false;return a.every(c=>safe(c))||a.some(c=>cs(c)>=41);}
+function canEnd(){const a=acC();if(!a.length)return false;return a.every(c=>safe(c));}
 function buyS(pur){
   const p=S.pl[S.cp];let tot=0,cnt=0;
   for(const[c,n]of Object.entries(pur)){if(n<=0)continue;tot+=sp(c,cs(c))*n;cnt+=n;}
@@ -767,8 +929,27 @@ function endTurn(){
   const cp2=S.pl[S.cp];if(cp2.hand.length>0&&!cp2.hand.some(t=>!dead(t))){log(`${cpn()} has no playable tiles.`);endTurn();}
 }
 function endGame(){
-  acC().forEach(c=>{payB(c);const s=cs(c),pr=sp(c,s);S.pl.forEach(p=>{if(p.stocks[c]>0){const v=p.stocks[c]*pr;p.cash+=v;log(`${p.name} sold ${p.stocks[c]} ${CL[c]} for $${v.toLocaleString()}.`);S.sb[c]+=p.stocks[c];p.stocks[c]=0;}});});
-  S.phase='over';S.msg='Game Over.';log('Game over.');
+  log('=== GAME ENDING ===');
+  const chains=acC();
+  chains.forEach(c=>{
+    log(`Final bonuses for ${CL[c]} (size ${cs(c)}):`);
+    payB(c);
+    const s=cs(c),pr=sp(c,s);
+    S.pl.forEach(p=>{
+      if(p.stocks[c]>0){
+        const v=p.stocks[c]*pr;
+        p.cash+=v;
+        log(`${p.name} liquidated ${p.stocks[c]} ${CL[c]} for $${v.toLocaleString()}.`);
+        S.sb[c]+=p.stocks[c];
+        p.stocks[c]=0;
+      }
+    });
+  });
+  S.phase='over';S.msg='Game Over.';
+  log('=== FINAL STANDINGS ===');
+  const sorted=[...S.pl].sort((a,b)=>b.cash-a.cash);
+  sorted.forEach((p,i)=>log(`${i+1}. ${p.name}: $${p.cash.toLocaleString()}`));
+  log(`Winner: ${sorted[0].name}!`);
 }
 
 // ═══ RENDER ═══
@@ -780,6 +961,8 @@ function rSetup(){
 }
 window.setSPC=function(n){spc=n;while(sn.length<n)sn.push('');sn=sn.slice(0,n);rSetup();};
 window.go=function(){const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);S=newGame(names);initC(S);S.msg=`${cpn()}, place a tile.`;sel=null;render();};
+window.clickC=function(idx){if(S.phase!=='place')return;const p=S.pl[S.cp];if(!p.hand.includes(idx))return;if(dead(idx))return;place(idx);render();};
+window.pickC=function(c){if(S.phase!=='found')return;found(c);render();};
 
 function render(){
   if(!S){rSetup();return;}if(S.phase==='over'){rOver();return;}
@@ -788,7 +971,7 @@ function render(){
 <div class="status-bar"><div class="turn">${cpn()}</div><div class="message">${S.msg}</div><div class="phase-tag">${S.phase==='place'?'Place Tile':S.phase==='buy'?'Buy Stock':S.phase}</div></div>
 <div class="game-layout"><div class="main-col"><div class="board-area"><div class="board-frame"><div class="board">${rBoard()}</div></div></div>
 <div class="hand-bar"><div class="hand-tiles"><span class="hand-label">Hand</span>${p.hand.map(t=>{const d=dead(t),s2=sel===t;return`<button class="tile-btn ${s2?'selected':''} ${d?'dead':''}" onclick="${d?'':'selTile('+t+')'}">${tl(t)}</button>`;}).join('')}</div>
-<div class="hand-actions">${S.phase==='place'?'<span class="hint-text">Select a tile to place</span>':''}${S.phase==='buy'?`<button class="btn btn-primary" onclick="openBuy()">Buy Shares</button><button class="btn" onclick="skipBuy()">Pass</button>`:''}</div></div></div>
+<div class="hand-actions">${S.phase==='place'?'<span class="hint-text">Select a tile to place</span>':''}${S.phase==='buy'&&!S._bm?`<button class="btn btn-primary" onclick="openBuy()">Buy Shares</button><button class="btn" onclick="skipBuy()">Pass</button>`:''}</div></div></div>
 <div class="sidebar"><div class="sb-section"><div class="sb-title">Stock Market</div>${rStocks()}</div>
 <div class="sb-section"><div class="sb-title">Players</div>${S.pl.map((p2,i)=>rPlr(p2,i)).join('')}</div>
 <div class="sb-section" style="border-bottom:none;padding-bottom:4px;"><div class="sb-title">Log</div></div>
@@ -810,20 +993,40 @@ function rBoard(){
     tiles.forEach(t=>{const r=Math.floor(t/C),c3=t%C,d=(r-sr)*(r-sr)+(c3-sc2)*(c3-sc2);if(d<bestD){bestD=d;best=t;}});
     centerTiles.add(best);
   });
-  for(let i=0;i<TT;i++){const v=S.board[i];let c='cell';let label=tl(i);if(v==='placed'){c+=' placed';}else if(v&&v!=='placed'){c+=` placed chain-${v}`;if(centerTiles.has(i)){label=CLetter[v];c+=' chain-center';}else{label='';}}if(S.phase==='place'&&v===null&&ph.includes(i)&&!dead(i))c+=' playable';h+=`<div class="${c}" onclick="clickC(${i})">${label}</div>`;}return h;
+  for(let i=0;i<TT;i++){
+    const v=S.board[i];let c='cell';let label=tl(i);
+    if(v==='placed'){c+=' placed';}
+    else if(v&&v!=='placed'){
+      c+=` placed chain-${v}`;
+      if(centerTiles.has(i)){label=CLetter[v];c+=' chain-center';}else{label='';}
+    }
+    if(S.phase==='place'&&v===null&&ph.includes(i)&&!dead(i))c+=' playable';
+    h+=`<div class="${c}" onclick="clickC(${i})">${label}</div>`;
+  }
+  return h;
 }
 
 function rStocks(){
   const tiers=[
-    {label:'Budget',chains:['tower','luxor']},
+    {label:'Premium',chains:['imperial','continental']},
     {label:'Standard',chains:['american','worldwide','festival']},
-    {label:'Premium',chains:['imperial','continental']}
+    {label:'Budget',chains:['tower','luxor']}
   ];
+  const cp=S.pl[S.cp];
   let rows='';
   tiers.forEach((tier,ti)=>{
-    rows+=`<tr><td colspan="4" style="padding:${ti>0?'6px':'2px'} 0 2px;font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;border-bottom:none;">${tier.label} <span style="font-weight:500;text-transform:none;letter-spacing:0;">— $${PT[ti][0]} base</span></td></tr>`;
-    tier.chains.forEach(c=>{const a=S.ca[c],s=cs(c),pr=a?sp(c,s):0,sf=safe(c);
-      rows+=`<tr class="${a?'':'inactive'}"><td><span class="chain-swatch" style="background:var(--${c})">${CLetter[c]}</span><span class="chain-nm">${CL[c]}</span>${sf?'<span class="safe-tag">SAFE</span>':''}</td><td class="stock-num">${a?s:'—'}</td><td class="stock-num stock-price">${a?'$'+pr:'—'}</td><td class="stock-num">${S.sb[c]}</td></tr>`;
+    rows+=`<tr><td colspan="4" style="padding:${ti>0?'6px':'2px'} 0 2px;font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;border-bottom:none;">${tier.label} <span style="font-weight:500;text-transform:none;letter-spacing:0;">- $${PT[ti][0]} base</span></td></tr>`;
+    tier.chains.forEach(c=>{
+      const a=S.ca[c],s=cs(c),pr=a?sp(c,s):0,sf=safe(c);
+      const owned=cp.stocks[c]||0;
+      let ownClass='';
+      let swatchClass='';
+      if(owned>0){
+        if(owned>=10){ownClass='owned-heavy';swatchClass='owned-heavy';}
+        else if(owned>=5){ownClass='owned-medium';swatchClass='owned-medium';}
+        else{ownClass='owned-light';swatchClass='owned-light';}
+      }
+      rows+=`<tr class="${a?'':'inactive'} ${ownClass}" style="color:var(--${c})"><td><span class="chain-swatch ${swatchClass}" style="background:var(--${c})">${CLetter[c]}</span><span class="chain-nm" style="color:var(--text)">${CL[c]}</span>${owned>0?`<span style="font-size:10px;font-weight:600;color:var(--${c});margin-left:6px;">${owned}</span>`:''}${sf?'<span class="safe-tag">SAFE</span>':''}</td><td class="stock-num" style="color:var(--text)">${a?s:'-'}</td><td class="stock-num stock-price">${a?'$'+pr:'-'}</td><td class="stock-num" style="color:var(--text)">${S.sb[c]}</td></tr>`;
     });
   });
   return`<table class="stock-tbl"><tr><th>Chain</th><th>Size</th><th>Price</th><th>Avail</th></tr>${rows}</table>`;
@@ -831,37 +1034,85 @@ function rStocks(){
 
 function rPlr(p,i){
   const a=i===S.cp,st=CHAINS.filter(c=>p.stocks[c]>0).map(c=>`<span class="plr-chip" style="background:var(--${c}-bg);color:var(--${c});border-color:var(--${c})">${p.stocks[c]} ${CL[c].substring(0,3)}</span>`).join('');
-  return`<div class="plr-card ${a?'active':''}"><div class="plr-top"><span class="plr-name">${a?'► ':''}${p.name}</span><span class="plr-cash">$${p.cash.toLocaleString()}</span></div><div class="plr-stocks">${st||'<span style="font-size:10px;color:var(--text-light)">—</span>'}</div></div>`;
+  return`<div class="plr-card ${a?'active':''}"><div class="plr-top"><span class="plr-name">${a?'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><path d="M5 3l14 9-14 9V3z"/></svg>':''}${p.name}</span><span class="plr-cash">$${p.cash.toLocaleString()}</span></div><div class="plr-stocks">${st||'<span style="font-size:10px;color:var(--text-light)">-</span>'}</div></div>`;
 }
 
 function rModal(){
   if(S.phase==='found'){const av=avC();return`<div class="modal-overlay"><div class="modal"><h2>Found a Chain</h2><p>Your tile connected adjacent tiles. Choose a hotel chain to establish.</p><p style="font-size:12px;color:var(--text-light);">Budget chains are cheaper to buy but pay less in mergers. Premium chains cost more but pay big bonuses.</p><div class="chain-grid">${av.map(c=>`<div class="chain-opt" onclick="pickC('${c}')"><div class="sw" style="background:var(--${c})">${CLetter[c]}</div><div><div>${CL[c]}</div><div style="font-size:10px;font-weight:500;color:var(--text-light)">${CTierLabel[CT[c]]}</div></div><span class="cprice">$${PT[CT[c]][0]}</span></div>`).join('')}</div></div></div>`;}
-  if(S.phase==='mergeWin'){const tw=S.pm.tw;return`<div class="modal-overlay"><div class="modal"><h2>Merger — Choose Survivor</h2><p>These chains are tied. Select which chain survives.</p><div class="chain-grid">${tw.map(c=>`<div class="chain-opt" onclick="pickW('${c}')"><div class="sw" style="background:var(--${c})">${CLetter[c]}</div>${CL[c]}<span class="cprice">${cs(c)} tiles</span></div>`).join('')}</div></div></div>`;}
+  if(S.phase==='mergeWin'){const tw=S.pm.tw;const sizes=tw.map(c=>cs(c))[0];return`<div class="modal-overlay"><div class="modal"><h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:8px;"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Merger: Tied Chains</h2><p style="margin-bottom:12px;">Multiple chains are tied at <strong>${sizes} tiles</strong>. The current player must choose which chain survives the merger.</p><p style="font-size:12px;color:var(--text-mid);margin-bottom:16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Tip: Choose the chain you own the most shares in, or the one with the highest tier for better future prices.</p><div class="chain-grid">${tw.map(c=>{const tier=CTierLabel[CT[c]];const cp=S.pl[S.cp];const owned=cp.stocks[c];return`<div class="chain-opt" onclick="pickW('${c}')"><div class="sw" style="background:var(--${c})">${CLetter[c]}</div><div style="flex:1;"><div>${CL[c]}</div><div style="font-size:10px;font-weight:500;color:var(--text-light);">${tier}</div></div><div style="text-align:right;font-size:11px;"><div style="font-weight:600;color:var(--text);">${cs(c)} tiles</div><div style="color:var(--text-mid);">You own: ${owned}</div></div></div>`;}).join('')}</div></div></div>`;}
   if(S.phase==='dispose')return rDisp();
-  if(S._bm)return rBuy();
+  if(S._bm){return rBuy();}
   return'';
 }
 
 function rBuy(){
   const p=S.pl[S.cp],ch=acC().filter(c=>S.sb[c]>0);let tc=0,tn=0;
   ch.forEach(c=>{const a=ba[c]||0;tc+=a*sp(c,cs(c));tn+=a;});
-  return`<div class="modal-overlay" onclick="skipBuy()"><div class="modal" onclick="event.stopPropagation()"><h2>Buy Shares</h2><p>Up to <strong>3 shares</strong> total. Cash: <strong>$${p.cash.toLocaleString()}</strong></p>${!ch.length?'<p style="color:var(--text-light)">No shares available.</p>':''}${ch.map(c=>{const pr=sp(c,cs(c)),a=ba[c]||0,mx=Math.min(3-tn+a,S.sb[c],Math.floor((p.cash-tc+a*pr)/pr));return`<div class="buy-row"><div class="buy-info"><span class="chain-swatch" style="background:var(--${c})">${CLetter[c]}</span><div><div>${CL[c]}</div><div style="font-size:9px;font-weight:500;color:var(--text-light)">${CTierLabel[CT[c]]}</div></div><span class="buy-price">$${pr}</span></div><div class="buy-ctrl"><button onclick="adjB('${c}',-1)" ${a<=0?'disabled':''}>−</button><span class="buy-cnt">${a}</span><button onclick="adjB('${c}',1)" ${a>=mx?'disabled':''}>+</button></div></div>`;}).join('')}<div class="buy-total">${tn}/3 shares · $${tc.toLocaleString()}</div><div class="modal-actions"><button class="btn" onclick="skipBuy()">Pass</button><button class="btn btn-primary" onclick="confBuy()">Buy</button></div></div></div>`;
+  return`<div class="modal-overlay" onclick="if(event.target===event.currentTarget)skipBuy()"><div class="modal"><h2>Buy Shares</h2><p>Up to <strong>3 shares</strong> total. Cash: <strong>$${p.cash.toLocaleString()}</strong></p>${!ch.length?'<p style="color:var(--text-light)">No shares available.</p>':''}${ch.map(c=>{const pr=sp(c,cs(c)),a=ba[c]||0,mx=Math.min(3-tn+a,S.sb[c],Math.floor((p.cash-tc+a*pr)/pr));return`<div class="buy-row"><div class="buy-info"><span class="chain-swatch" style="background:var(--${c})">${CLetter[c]}</span><div><div>${CL[c]}</div><div style="font-size:9px;font-weight:500;color:var(--text-light)">${CTierLabel[CT[c]]}</div></div><span class="buy-price">$${pr}</span></div><div class="buy-ctrl"><button type="button" onclick="adjB('${c}',-1)" ${a<=0?'disabled':''}>−</button><span class="buy-cnt">${a}</span><button type="button" onclick="adjB('${c}',1)" ${a>=mx?'disabled':''}>+</button></div></div>`;}).join('')}<div class="buy-total">${tn}/3 shares · $${tc.toLocaleString()}</div><div class="modal-actions"><button type="button" class="btn" onclick="skipBuy()">Pass</button><button type="button" class="btn btn-primary" onclick="confBuy()" ${tn===0?'disabled':''}>Buy</button></div></div></div>`;
 }
 
 function rDisp(){
   const m=S.pm,dc=m.df[m.cd],p=S.pl[m.cd2],sh=p.stocks[dc],s=cs(dc),pr=sp(dc,s),wa=S.sb[m.w],mxt=Math.min(Math.floor(sh/2),wa);
-  return`<div class="modal-overlay"><div class="modal"><h2>Dispose — ${CL[dc]}</h2><p><strong>${p.name}</strong> holds <strong>${sh}</strong> shares of ${CL[dc]} at $${pr}/share. Trade 2:1 for ${CL[m.w]} or sell.</p><div class="disp-row"><label>Sell:</label><input type="number" id="ds" min="0" max="${sh}" value="${ms}" oninput="uDisp()"/></div><div class="disp-row"><label>Trade 2:1:</label><input type="number" id="dt" min="0" max="${mxt}" value="${mt}" oninput="uDisp()"/></div><div class="disp-keep">Holding: <strong id="dk">${Math.max(0,sh-ms-mt*2)}</strong></div><div class="modal-actions"><button class="btn btn-primary" onclick="confDisp()">Confirm</button></div></div></div>`;
+  const surv=CL[m.w],def=CL[dc];
+  const sellVal=ms*pr,tradeGain=mt,holding=Math.max(0,sh-ms-mt*2),holdVal=holding*pr;
+  const totalCash=sellVal;
+  return`<div class="modal-overlay"><div class="modal" style="max-width:480px;"><h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:8px;"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Merger: Dispose Shares</h2><p style="margin-bottom:16px;"><strong>${surv}</strong> is acquiring <strong>${def}</strong>. <strong>${p.name}</strong> must decide what to do with <strong>${sh}</strong> shares of ${def}.</p><div class="merger-info"><div class="merger-info-row"><span class="merger-info-label">Defunct Chain:</span><span class="merger-info-value" style="color:var(--${dc})">${def}</span></div><div class="merger-info-row"><span class="merger-info-label">Share Value:</span><span class="merger-info-value">$${pr}</span></div><div class="merger-info-row"><span class="merger-info-label">Surviving Chain:</span><span class="merger-info-value" style="color:var(--${m.w})">${surv}</span></div><div class="merger-info-row"><span class="merger-info-label">Available to Trade:</span><span class="merger-info-value">${wa} ${surv} shares</span></div></div><div class="disp-option"><div class="disp-option-header"><span class="disp-option-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 9h6"/></svg>Sell for Cash</span></div><div class="disp-option-desc">Sell ${def} shares at current price ($${pr} each)</div><div class="disp-controls"><button onclick="adjDisp('sell',-1)" ${ms<=0?'disabled':''}>−</button><span class="disp-count">${ms}</span><button onclick="adjDisp('sell',1)" ${ms>=sh-mt*2?'disabled':''}>+</button><button onclick="adjDisp('sell',5)" ${ms+5>sh-mt*2?'disabled':''}>+5</button><button onclick="adjDisp('sell','max')" ${ms>=sh-mt*2?'disabled':''}>Max</button></div></div><div class="disp-option"><div class="disp-option-header"><span class="disp-option-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>Trade 2-for-1</span></div><div class="disp-option-desc">Trade 2 ${def} shares for 1 ${surv} share (${wa} available)</div><div class="disp-controls"><button onclick="adjDisp('trade',-1)" ${mt<=0?'disabled':''}>−</button><span class="disp-count">${mt}</span><button onclick="adjDisp('trade',1)" ${mt>=mxt||mt*2>=sh-ms?'disabled':''}>+</button><button onclick="adjDisp('trade',5)" ${mt+5>mxt||mt*2+10>sh-ms?'disabled':''}>+5</button><button onclick="adjDisp('trade','max')" ${mt>=mxt||mt*2>=sh-ms?'disabled':''}>Max</button></div></div><div class="disp-option" style="border-color:var(--border-dark);"><div class="disp-option-header"><span class="disp-option-title">🤝 Hold</span></div><div class="disp-option-desc">Keep ${def} shares (worthless after merger, but may be reactivated later)</div><div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;color:var(--text);">${holding} shares</div></div><div class="disp-summary"><div class="disp-summary-row"><span class="disp-summary-label">Selling:</span><span class="disp-summary-value">${ms} × $${pr} = $${sellVal.toLocaleString()}</span></div><div class="disp-summary-row"><span class="disp-summary-label">Trading:</span><span class="disp-summary-value">${mt*2} ${def} → ${mt} ${surv}</span></div><div class="disp-summary-row"><span class="disp-summary-label">Holding:</span><span class="disp-summary-value">${holding} ${def}</span></div><div class="disp-summary-row disp-summary-total"><span class="disp-summary-label">Cash Gained:</span><span class="disp-summary-value">$${totalCash.toLocaleString()}</span></div></div><div class="modal-actions"><button class="btn" onclick="quickDisp('sellall')">Sell All</button><button class="btn" onclick="quickDisp('tradeall')">Trade All</button><button class="btn" onclick="quickDisp('hold')">Hold All</button><button class="btn btn-primary" onclick="confDisp()">Confirm</button></div></div></div>`;
 }
 
 function rOver(){
-  const sorted=[...S.pl].sort((a,b)=>b.cash-a.cash),w=sorted[0];
-  app.innerHTML=`<div class="gameover"><h1>Game Over</h1><div class="winner">${w.name} — $${w.cash.toLocaleString()}</div><div class="standings">${sorted.map((p,i)=>`<div class="st-row ${i===0?'first':''}"><span class="rank">${i+1}.</span><span>${p.name}</span><span class="st-cash">$${p.cash.toLocaleString()}</span></div>`).join('')}</div><button class="btn btn-primary" style="padding:10px 32px;" onclick="S=null;rSetup();">New Game</button></div>`;
+  const sorted=[...S.pl].sort((a,b)=>b.cash-a.cash);
+  const w=sorted[0];
+  const totalTurns=S.log.length;
+  const activeChainsEnd=acC().length;
+  const largestChain=CHAINS.reduce((max,c)=>cs(c)>cs(max)?c:max,CHAINS[0]);
+  const largestSize=cs(largestChain);
+  
+  const shareText=`I just won Acquire with $${w.cash.toLocaleString()}! 🏆`;
+  
+  app.innerHTML=`<div class="gameover"><div class="gameover-container">
+    <h1>Game Over</h1>
+    <div class="gameover-subtitle">Final Results</div>
+    
+    <div class="winner-banner">
+      <div class="winner-trophy"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg></div>
+      <div class="winner-name">${w.name} Wins!</div>
+      <div class="winner-cash">$${w.cash.toLocaleString()}</div>
+    </div>
+    
+    <div class="game-stats">
+      <div class="stat-item">
+        <div class="stat-value">${totalTurns}</div>
+        <div class="stat-label">Total Moves</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${activeChainsEnd}</div>
+        <div class="stat-label">Active Chains</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${largestSize}</div>
+        <div class="stat-label">Largest Chain</div>
+      </div>
+    </div>
+    
+    <div class="standings">
+      <div class="standings-header">Final Rankings</div>
+      ${sorted.map((p,i)=>{const stockVal=CHAINS.reduce((sum,c)=>sum+(p.stocks[c]*sp(c,cs(c))),0);const totalStocks=CHAINS.reduce((sum,c)=>sum+p.stocks[c],0);return`<div class="st-row ${i===0?'first':''}">
+        <div class="st-rank">${i===0?'<svg width="24" height="24" viewBox="0 0 24 24" fill="#FFD700" stroke="#DAA520" stroke-width="1.5"><circle cx="12" cy="8" r="6"/><path d="M12 2v4M8 4l2 2M16 4l-2 2"/><path d="M15.5 13l-1.5 9h-4l-1.5-9"/><rect x="9" y="13" width="6" height="2" rx="1" fill="#FFD700"/></svg>':i===1?'<svg width="24" height="24" viewBox="0 0 24 24" fill="#C0C0C0" stroke="#A8A8A8" stroke-width="1.5"><circle cx="12" cy="8" r="6"/><path d="M12 2v4M8 4l2 2M16 4l-2 2"/><path d="M15.5 13l-1.5 9h-4l-1.5-9"/><rect x="9" y="13" width="6" height="2" rx="1" fill="#C0C0C0"/></svg>':i===2?'<svg width="24" height="24" viewBox="0 0 24 24" fill="#CD7F32" stroke="#8B4513" stroke-width="1.5"><circle cx="12" cy="8" r="6"/><path d="M12 2v4M8 4l2 2M16 4l-2 2"/><path d="M15.5 13l-1.5 9h-4l-1.5-9"/><rect x="9" y="13" width="6" height="2" rx="1" fill="#CD7F32"/></svg>':(i+1)+'.'}</div>
+        <div class="st-info">
+          <div class="st-name">${p.name}</div>
+          <div class="st-details">${totalStocks} shares · Stock value: $${stockVal.toLocaleString()}</div>
+        </div>
+        <div class="st-cash">$${p.cash.toLocaleString()}</div>
+      </div>`;}).join('')}
+    </div>
+    
+    <div class="gameover-actions">
+      <button class="btn-new-game" onclick="newGameClick()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Play Again</button>
+      <button class="btn-share" onclick="shareGame('${shareText.replace(/'/g,"\\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>Share Results</button>
+      <button class="btn-share" onclick="viewLog()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>View Game Log</button>
+    </div>
+  </div></div>`;
 }
-
-// Events
-window.selTile=function(t){if(S.phase!=='place')return;if(sel===t){S.pl[S.cp].hand=S.pl[S.cp].hand.filter(x=>x!==t);sel=null;place(t);render();return;}sel=t;render();};
-window.clickC=function(i){if(S.phase!=='place')return;const p=S.pl[S.cp];if(!p.hand.includes(i)||dead(i))return;p.hand=p.hand.filter(t=>t!==i);sel=null;place(i);render();};
-window.pickC=function(c){if(S.phase!=='found')return;found(c);render();};
 window.pickW=function(c){if(S.phase!=='mergeWin')return;pickWin(c);render();};
 window.openBuy=function(){ba={};S._bm=true;render();};
 window.clBuy=function(e){if(e.target===e.currentTarget){S._bm=false;render();}};
@@ -869,9 +1120,42 @@ window.clBuyA=function(){S._bm=false;render();};
 window.adjB=function(c,d){if(!ba[c])ba[c]=0;ba[c]=Math.max(0,ba[c]+d);let t=Object.values(ba).reduce((a,b)=>a+b,0);if(t>3)ba[c]-=(t-3);render();};
 window.confBuy=function(){S._bm=false;buyS(ba);render();};
 window.skipBuy=function(){S._bm=false;log(`${cpn()} passed.`);endTurn();render();};
-window.uDisp=function(){ms=parseInt(document.getElementById('ds').value)||0;mt=parseInt(document.getElementById('dt').value)||0;const m=S.pm,sh=S.pl[m.cd2].stocks[m.df[m.cd]];document.getElementById('dk').textContent=Math.max(0,sh-ms-mt*2);};
-window.confDisp=function(){ms=parseInt(document.getElementById('ds').value)||0;mt=parseInt(document.getElementById('dt').value)||0;subDisp(ms,mt);ms=0;mt=0;render();};
+window.adjDisp=function(type,amt){
+  const m=S.pm,sh=S.pl[m.cd2].stocks[m.df[m.cd]],wa=S.sb[m.w],mxt=Math.min(Math.floor(sh/2),wa);
+  if(type==='sell'){
+    if(amt==='max'){ms=sh-mt*2;}
+    else{ms=Math.max(0,Math.min(sh-mt*2,ms+amt));}
+  }else if(type==='trade'){
+    if(amt==='max'){mt=Math.min(mxt,Math.floor((sh-ms)/2));}
+    else{mt=Math.max(0,Math.min(mxt,Math.min(Math.floor((sh-ms)/2),mt+amt)));}
+  }
+  render();
+};
+window.quickDisp=function(action){
+  const m=S.pm,sh=S.pl[m.cd2].stocks[m.df[m.cd]],wa=S.sb[m.w],mxt=Math.min(Math.floor(sh/2),wa);
+  if(action==='sellall'){ms=sh;mt=0;}
+  else if(action==='tradeall'){mt=mxt;ms=0;}
+  else if(action==='hold'){ms=0;mt=0;}
+  render();
+};
+window.confDisp=function(){subDisp(ms,mt);ms=0;mt=0;render();};
 window.doEnd=function(){endGame();render();};
+window.newGameClick=function(){S=null;ms=0;mt=0;ba={};sel=null;rSetup();};
+window.shareGame=function(text){
+  if(navigator.share){
+    navigator.share({title:'Acquire Game Results',text:text,url:window.location.href}).catch(e=>console.log('Share failed',e));
+  }else if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>alert('Results copied to clipboard!')).catch(()=>alert('Failed to copy'));
+  }else{
+    alert(text);
+  }
+};
+window.viewLog=function(){
+  const o=document.createElement('div');o.className='modal-overlay';o.onclick=e=>{if(e.target===o)o.remove();};
+  const logHtml=S.log.map((msg,i)=>`<div style="padding:4px 0;font-size:12px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;"><span style="color:var(--text-light);margin-right:8px;">${i+1}.</span>${msg}</div>`).join('');
+  o.innerHTML=`<div class="modal" style="max-width:600px;max-height:80vh;" onclick="event.stopPropagation()"><h2>Game Log</h2><div style="max-height:60vh;overflow-y:auto;margin:16px 0;">${logHtml}</div><div class="modal-actions"><button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Close</button></div></div>`;
+  document.body.appendChild(o);
+};
 
 window.rules=function(){
   const o=document.createElement('div');o.className='modal-overlay';o.onclick=e=>{if(e.target===o)o.remove();};
@@ -881,5 +1165,7 @@ window.rules=function(){
 
 rSetup();
 </script>
+<script src="/dynamic-init.js"></script>
+<script src="/app.js"></script>
 </body>
 </html>

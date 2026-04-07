@@ -8,4 +8,8 @@ typechain-types
 cache
 artifacts
 
+# Rust
+target/
+Cargo.lock
+
 .DS_Store
