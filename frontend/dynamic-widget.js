@@ -3,6 +3,7 @@ import { createDynamicClient } from "@dynamic-labs-sdk/client";
 import { addEvmExtension } from "@dynamic-labs-sdk/evm";
 import {
   sendEmailOTP,
+  sendSmsOTP,
   verifyOTP,
   authenticateWithSocial,
   detectOAuthRedirect,
@@ -113,6 +114,9 @@ function showLoginUI(container) {
       <button class="btn btn-primary" onclick="showEmailLogin()" style="width: 100%;">
         Sign in with Email
       </button>
+      <button class="btn btn-primary" onclick="showPhoneLogin()" style="width: 100%;">
+        Sign in with Phone
+      </button>
       <button class="btn" onclick="signInWithGoogle()" style="width: 100%; background: white; color: #333; border: 1px solid var(--border);">
         Sign in with Google
       </button>
@@ -175,8 +179,41 @@ function showOTPInput() {
   setTimeout(() => document.getElementById('otp-input').focus(), 100);
 }
 
+function showPhoneInput() {
+  const container = document.getElementById('dynamic-auth');
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <select id="country-code" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Source Sans 3', sans-serif; font-size: 14px;">
+        <option value="US">🇺🇸 United States (+1)</option>
+        <option value="GB">🇬🇧 United Kingdom (+44)</option>
+        <option value="CA">🇨🇦 Canada (+1)</option>
+        <option value="AU">🇦🇺 Australia (+61)</option>
+        <option value="DE">🇩🇪 Germany (+49)</option>
+        <option value="FR">🇫🇷 France (+33)</option>
+        <option value="ES">🇪🇸 Spain (+34)</option>
+        <option value="IT">🇮🇹 Italy (+39)</option>
+        <option value="JP">🇯🇵 Japan (+81)</option>
+        <option value="CN">🇨🇳 China (+86)</option>
+        <option value="IN">🇮🇳 India (+91)</option>
+      </select>
+      <input type="tel" id="phone-input" placeholder="Phone number" 
+        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Source Sans 3', sans-serif; font-size: 14px;" />
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" onclick="window.showLoginUI(document.getElementById('dynamic-auth'))" style="flex: 1;">
+          Back
+        </button>
+        <button class="btn btn-primary" onclick="sendSMS()" style="flex: 1;">
+          Send Code
+        </button>
+      </div>
+    </div>
+  `;
+  setTimeout(() => document.getElementById('phone-input').focus(), 100);
+}
+
 // Global functions
 window.showEmailLogin = showEmailInput;
+window.showPhoneLogin = showPhoneInput;
 
 window.sendOTP = async function() {
   const email = document.getElementById('email-input').value.trim();
@@ -190,6 +227,27 @@ window.sendOTP = async function() {
     showOTPInput();
   } catch (error) {
     console.error('Error sending OTP:', error);
+    alert('Failed to send code: ' + error.message);
+  }
+};
+
+window.sendSMS = async function() {
+  const countryCode = document.getElementById('country-code').value;
+  const phoneNumber = document.getElementById('phone-input').value.trim();
+  
+  if (!phoneNumber) {
+    alert('Please enter your phone number');
+    return;
+  }
+  
+  try {
+    otpVerification = await sendSmsOTP({ 
+      isoCountryCode: countryCode, 
+      phoneNumber: phoneNumber 
+    });
+    showOTPInput();
+  } catch (error) {
+    console.error('Error sending SMS:', error);
     alert('Failed to send code: ' + error.message);
   }
 };

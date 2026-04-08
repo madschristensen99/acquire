@@ -60788,6 +60788,9 @@ ${trace.payload.join("\n")}
       <button class="btn btn-primary" onclick="showEmailLogin()" style="width: 100%;">
         Sign in with Email
       </button>
+      <button class="btn btn-primary" onclick="showPhoneLogin()" style="width: 100%;">
+        Sign in with Phone
+      </button>
       <button class="btn" onclick="signInWithGoogle()" style="width: 100%; background: white; color: #333; border: 1px solid var(--border);">
         Sign in with Google
       </button>
@@ -60843,7 +60846,39 @@ ${trace.payload.join("\n")}
   `;
     setTimeout(() => document.getElementById("otp-input").focus(), 100);
   }
+  function showPhoneInput() {
+    const container = document.getElementById("dynamic-auth");
+    container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <select id="country-code" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Source Sans 3', sans-serif; font-size: 14px;">
+        <option value="US">\u{1F1FA}\u{1F1F8} United States (+1)</option>
+        <option value="GB">\u{1F1EC}\u{1F1E7} United Kingdom (+44)</option>
+        <option value="CA">\u{1F1E8}\u{1F1E6} Canada (+1)</option>
+        <option value="AU">\u{1F1E6}\u{1F1FA} Australia (+61)</option>
+        <option value="DE">\u{1F1E9}\u{1F1EA} Germany (+49)</option>
+        <option value="FR">\u{1F1EB}\u{1F1F7} France (+33)</option>
+        <option value="ES">\u{1F1EA}\u{1F1F8} Spain (+34)</option>
+        <option value="IT">\u{1F1EE}\u{1F1F9} Italy (+39)</option>
+        <option value="JP">\u{1F1EF}\u{1F1F5} Japan (+81)</option>
+        <option value="CN">\u{1F1E8}\u{1F1F3} China (+86)</option>
+        <option value="IN">\u{1F1EE}\u{1F1F3} India (+91)</option>
+      </select>
+      <input type="tel" id="phone-input" placeholder="Phone number" 
+        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Source Sans 3', sans-serif; font-size: 14px;" />
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" onclick="window.showLoginUI(document.getElementById('dynamic-auth'))" style="flex: 1;">
+          Back
+        </button>
+        <button class="btn btn-primary" onclick="sendSMS()" style="flex: 1;">
+          Send Code
+        </button>
+      </div>
+    </div>
+  `;
+    setTimeout(() => document.getElementById("phone-input").focus(), 100);
+  }
   window.showEmailLogin = showEmailInput;
+  window.showPhoneLogin = showPhoneInput;
   window.sendOTP = async function() {
     const email2 = document.getElementById("email-input").value.trim();
     if (!email2) {
@@ -60855,6 +60890,24 @@ ${trace.payload.join("\n")}
       showOTPInput();
     } catch (error) {
       console.error("Error sending OTP:", error);
+      alert("Failed to send code: " + error.message);
+    }
+  };
+  window.sendSMS = async function() {
+    const countryCode = document.getElementById("country-code").value;
+    const phoneNumber = document.getElementById("phone-input").value.trim();
+    if (!phoneNumber) {
+      alert("Please enter your phone number");
+      return;
+    }
+    try {
+      otpVerification = await __sendSmsOTP_wrapped({
+        isoCountryCode: countryCode,
+        phoneNumber
+      });
+      showOTPInput();
+    } catch (error) {
+      console.error("Error sending SMS:", error);
       alert("Failed to send code: " + error.message);
     }
   };
