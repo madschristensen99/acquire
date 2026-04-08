@@ -12,10 +12,6 @@
 <link rel="icon" type="image/svg+xml" href="/icons/icon-192x192.svg">
 <title>ACQUIRE</title>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@dynamic-labs/sdk-react-core@2/dist/DynamicSDK.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@dynamic-labs/ethereum@2/dist/DynamicEthereum.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
 <style>
 :root {
@@ -582,6 +578,40 @@ header {
   color: var(--text-light); text-transform: uppercase;
   letter-spacing: 1.5px; margin-bottom: 8px;
 }
+.auth-section {
+  margin-bottom: 24px; padding: 20px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.auth-section h3 {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  margin-bottom: 12px; text-align: center;
+}
+.auth-section p {
+  font-size: 12px; color: var(--text-mid); text-align: center;
+  margin-bottom: 12px;
+}
+#dynamic-auth {
+  margin-bottom: 12px;
+}
+.pwa-install {
+  display: none; margin-top: 12px;
+}
+.pwa-install.show {
+  display: block;
+}
+.btn-install-pwa {
+  width: 100%; padding: 10px; background: var(--green-dark);
+  color: white; border: none; border-radius: 6px;
+  font-family: 'Source Sans 3', sans-serif; font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-install-pwa:hover {
+  background: #145230; transform: translateY(-1px);
+}
+.btn-install-pwa svg {
+  width: 18px; height: 18px;
+}
 .count-btns { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; }
 .count-btn {
   width: 42px; height: 42px; border: 2px solid var(--border-dark);
@@ -865,7 +895,6 @@ function startMerge(t,cl,ap){
 }
 function pickWin(c){const m=S.pm;m.w=c;m.df=m.cl.filter(x=>x!==c);m.df.sort((a,b)=>cs(b)-cs(a));m.tw=null;startDR();}
 function startDR(){const m=S.pm;if(m.cd>=m.df.length){finMerge();return;}payB(m.df[m.cd]);m.cd2=S.cp;m.dp=[];promptDisp();}
-
 function payB(c){
   const s=cs(c),maj=majB(c,s),min=minB(c,s);
   let h=S.pl.map((p,i)=>({i,s:p.stocks[c]})).filter(x=>x.s>0);h.sort((a,b)=>b.s-a.s);
@@ -884,22 +913,18 @@ function subDisp(sell,trade){
   if(sell+trade*2>p.stocks[dc])return;if(trade>0&&S.sb[m.w]<trade)return;
   if(sell>0){p.cash+=sell*pr;p.stocks[dc]-=sell;S.sb[dc]+=sell;log(`${p.name} sold ${sell} ${CL[dc]} for $${(sell*pr).toLocaleString()}.`);}
   if(trade>0){p.stocks[dc]-=trade*2;S.sb[dc]+=trade*2;p.stocks[m.w]+=trade;S.sb[m.w]-=trade;log(`${p.name} traded ${trade*2} ${CL[dc]} for ${trade} ${CL[m.w]}.`);}
-  const k=p.stocks[dc];if(k>0)log(`${p.name} held ${k} ${CL[dc]}.`);advDisp();
-}
+  const k=p.stocks[dc];if(k>0)log(`${p.name} held ${k} ${CL[dc]}.`);advDisp();}
 function advDisp(){
   const m=S.pm;let n=(m.cd2+1)%S.pl.length,ck=0;
   while(ck<S.pl.length){if(S.pl[n].stocks[m.df[m.cd]]>0&&!m.dp.includes(n)){m.cd2=n;m.dp.push(n);promptDisp();return;}n=(n+1)%S.pl.length;ck++;}
-  m.cd++;if(m.cd<m.df.length){m.dp=[];startDR();}else finMerge();
-}
+  m.cd++;if(m.cd<m.df.length){m.dp=[];startDR();}else finMerge();}
 function finMerge(){
   const m=S.pm,w=m.w;
   m.df.forEach(dc=>{S.chains[dc].forEach(t=>{S.board[t]=w;S.chains[w].add(t);});S.chains[dc]=new Set();S.ca[dc]=false;});
   S.board[m.tt]=w;S.chains[w].add(m.tt);
   m.ap.forEach(t=>{S.board[t]=w;S.chains[w].add(t);});
   let ch=true;while(ch){ch=false;S.chains[w].forEach(t=>{adj(t).forEach(a=>{if(S.board[a]==='placed'){S.board[a]=w;S.chains[w].add(a);ch=true;}});});}
-  log(`Merger complete. ${CL[w]} is now size ${cs(w)}.`);S.pm=null;toBuy();
-}
-
+  log(`Merger complete. ${CL[w]} is now size ${cs(w)}.`);S.pm=null;toBuy();}
 function toBuy(){
   const ch=acC();
   if(!ch.length){endTurn();return;}
@@ -920,8 +945,7 @@ function buyS(pur){
   for(const[c,n]of Object.entries(pur)){if(n<=0)continue;tot+=sp(c,cs(c))*n;cnt+=n;}
   if(cnt>3||tot>p.cash)return;
   for(const[c,n]of Object.entries(pur)){if(n<=0)continue;const pr=sp(c,cs(c));p.cash-=pr*n;p.stocks[c]+=n;S.sb[c]-=n;log(`${cpn()} bought ${n} ${CL[c]} at $${pr}.`);}
-  endTurn();
-}
+  endTurn();}
 function endTurn(){
   const p=S.pl[S.cp];while(p.hand.length<6&&S.bag.length>0)p.hand.push(S.bag.pop());p.hand.sort((a,b)=>a-b);
   let rp=true;while(rp){rp=false;for(let i=p.hand.length-1;i>=0;i--)if(dead(p.hand[i])){p.hand.splice(i,1);if(S.bag.length>0){p.hand.push(S.bag.pop());rp=true;}}p.hand.sort((a,b)=>a-b);}
@@ -957,7 +981,23 @@ const app=document.getElementById('app');
 let spc=3,sn=['','',''],sel=null,ba={},ms=0,mt=0;
 
 function rSetup(){
-  app.innerHTML=`<div class="setup"><div class="setup-box"><h1>Acquire</h1><p class="sub">A game of high finance and hotel chains</p><div class="divider"></div><label>Players</label><div class="count-btns">${[2,3,4,5,6].map(n=>`<button class="count-btn ${n===spc?'sel':''}" onclick="setSPC(${n})">${n}</button>`).join('')}</div><div class="name-fields">${sn.map((n,i)=>`<input value="${n}" placeholder="Player ${i+1}" onchange="sn[${i}]=this.value"/>`).join('')}</div><button class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;" onclick="go()">Start Game</button></div></div>`;
+  app.innerHTML=`<div class="setup"><div class="setup-box"><h1>Acquire</h1><p class="sub">A game of high finance and hotel chains</p><div class="divider"></div>
+  <div class="auth-section">
+    <h3>Sign In for Online Multiplayer</h3>
+    <div id="dynamic-auth"></div>
+    <div class="pwa-install" id="pwa-install">
+      <button class="btn-install-pwa" onclick="installPWA()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Install App
+      </button>
+    </div>
+  </div>
+  <label>Players</label><div class="count-btns">${[2,3,4,5,6].map(n=>`<button class="count-btn ${n===spc?'sel':''}" onclick="setSPC(${n})">${n}</button>`).join('')}</div><div class="name-fields">${sn.map((n,i)=>`<input value="${n}" placeholder="Player ${i+1}" onchange="sn[${i}]=this.value"/>`).join('')}</div><button class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;" onclick="go()">Start Game</button></div></div>`;
+  checkPWAInstallable();
 }
 window.setSPC=function(n){spc=n;while(sn.length<n)sn.push('');sn=sn.slice(0,n);rSetup();};
 window.go=function(){const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);S=newGame(names);initC(S);S.msg=`${cpn()}, place a tile.`;sel=null;render();};
@@ -1163,9 +1203,55 @@ window.rules=function(){
   document.body.appendChild(o);
 };
 
+// PWA Install functionality
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  checkPWAInstallable();
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log('PWA installed successfully');
+  deferredPrompt = null;
+  checkPWAInstallable();
+});
+
+function checkPWAInstallable() {
+  const installBtn = document.getElementById('pwa-install');
+  if (!installBtn) return;
+  
+  // Check if already installed
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    installBtn.classList.remove('show');
+    return;
+  }
+  
+  // Check if install prompt is available
+  if (deferredPrompt) {
+    installBtn.classList.add('show');
+  } else {
+    installBtn.classList.remove('show');
+  }
+}
+
+window.installPWA = async function() {
+  if (!deferredPrompt) {
+    alert('App is already installed or installation is not available');
+    return;
+  }
+  
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log(`User ${outcome} the install prompt`);
+  deferredPrompt = null;
+  checkPWAInstallable();
+};
+
 rSetup();
 </script>
-<script src="/dynamic-init.js"></script>
+<script src="/dynamic-auth.bundle.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
