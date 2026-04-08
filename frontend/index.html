@@ -978,9 +978,12 @@ function endGame(){
 
 // ═══ RENDER ═══
 const app=document.getElementById('app');
-let spc=3,sn=['','',''],sel=null,ba={},ms=0,mt=0;
+let spc=3,sn=['','',''],sel=null,ba={},ms=0,mt=0,gameMode='local';
 
 function rSetup(){
+  const currentUser = window.currentUsername || (window.client && window.client.user ? getUserInfoFromClient() : null);
+  const isAuthenticated = !!currentUser;
+  
   app.innerHTML=`<div class="setup"><div class="setup-box"><h1>Acquire</h1><p class="sub">A game of high finance and hotel chains</p><div class="divider"></div>
   <div class="auth-section">
     <h3>Sign In for Online Multiplayer</h3>
@@ -996,10 +999,64 @@ function rSetup(){
       </button>
     </div>
   </div>
-  <label>Players</label><div class="count-btns">${[2,3,4,5,6].map(n=>`<button class="count-btn ${n===spc?'sel':''}" onclick="setSPC(${n})">${n}</button>`).join('')}</div><div class="name-fields">${sn.map((n,i)=>`<input value="${n}" placeholder="Player ${i+1}" onchange="sn[${i}]=this.value"/>`).join('')}</div><button class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;" onclick="go()">Start Game</button></div></div>`;
+  <div class="divider"></div>
+  <label>Game Mode</label>
+  <div class="count-btns">
+    <button class="count-btn ${gameMode==='local'?'sel':''}" onclick="setGameMode('local')">Local</button>
+    <button class="count-btn ${gameMode==='online'?'sel':''}" onclick="setGameMode('online')" ${!isAuthenticated?'disabled title="Sign in to play online"':''}>
+      Online ${!isAuthenticated?'🔒':''}
+    </button>
+  </div>
+  ${gameMode==='online'?`<p style="font-size:12px;color:var(--text-mid);margin:8px 0;">Invite friends to play online multiplayer</p>`:''}
+  <label>Players</label><div class="count-btns">${[2,3,4,5,6].map(n=>`<button class="count-btn ${n===spc?'sel':''}" onclick="setSPC(${n})">${n}</button>`).join('')}</div>
+  <div class="name-fields">${sn.map((n,i)=>{
+    const isPlayer1 = i===0;
+    const autoFilled = gameMode==='online' && isPlayer1 && isAuthenticated;
+    const displayName = autoFilled ? currentUser : n;
+    return `<div style="position:relative;">
+      <input value="${displayName}" placeholder="Player ${i+1}${gameMode==='online'?' (click to invite)':''}" 
+        ${autoFilled?'readonly style="background:#f0f0f0;"':''}
+        onchange="sn[${i}]=this.value"
+        ${gameMode==='online'&&!isPlayer1?'onclick="invitePlayer('+i+')"':''}/>
+      ${gameMode==='online'&&!isPlayer1?'<span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-mid);">👥</span>':''}
+    </div>`;
+  }).join('')}</div>
+  <button class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;" onclick="go()">${gameMode==='online'?'Create Game':'Start Game'}</button></div></div>`;
   checkPWAInstallable();
+  
+  // Auto-fill player 1 with authenticated user in online mode
+  if(gameMode==='online' && isAuthenticated && sn[0]!==currentUser){
+    sn[0]=currentUser;
+  }
 }
 window.setSPC=function(n){spc=n;while(sn.length<n)sn.push('');sn=sn.slice(0,n);rSetup();};
+window.setGameMode=function(mode){
+  const currentUser = window.currentUsername || (window.client && window.client.user ? getUserInfoFromClient() : null);
+  if(mode==='online' && !currentUser){
+    alert('Please sign in to play online multiplayer');
+    return;
+  }
+  gameMode=mode;
+  if(mode==='online' && currentUser){
+    sn[0]=currentUser;
+  }
+  rSetup();
+};
+window.invitePlayer=function(idx){
+  alert('Player invitation feature coming soon!\n\nFor now, share your game link with friends and they can join by entering their name.');
+};
+function getUserInfoFromClient(){
+  if(!window.client || !window.client.user) return null;
+  const user = window.client.user;
+  if(user.email) return user.email;
+  if(user.username) return user.username;
+  if(user.verifiedCredentials && user.verifiedCredentials.length>0){
+    const cred = user.verifiedCredentials[0];
+    if(cred.email) return cred.email;
+    if(cred.phoneNumber) return cred.phoneNumber;
+  }
+  return null;
+};
 window.go=function(){const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);S=newGame(names);initC(S);S.msg=`${cpn()}, place a tile.`;sel=null;render();};
 window.clickC=function(idx){if(S.phase!=='place')return;const p=S.pl[S.cp];if(!p.hand.includes(idx))return;if(dead(idx))return;place(idx);render();};
 window.pickC=function(c){if(S.phase!=='found')return;found(c);render();};
