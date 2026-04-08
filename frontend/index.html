@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Acquire">
-<link rel="icon" type="image/svg+xml" href="/icons/icon-192x192.svg">
+<link rel="icon" type="image/svg+xml" href="./icons/icon-192x192.svg">
 <title>ACQUIRE</title>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
@@ -984,6 +984,11 @@ function endGame(){
 const app=document.getElementById('app');
 let spc=3,sn=['','',''],sel=null,ba={},ms=0,mt=0,gameMode='local',gameCode=null,isHost=false;
 
+// API URL - use environment variable or default to localhost for development
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3001'
+  : 'https://your-vps-domain.com'; // TODO: Replace with your VPS domain
+
 function generateGameCode(){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code='';
@@ -1108,7 +1113,7 @@ window.createOnlineGame=async function(){
   
   // Store game in MongoDB via Rust API
   try {
-    const response = await fetch('http://localhost:3001/api/games', {
+    const response = await fetch(`${API_URL}/api/games`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -1141,7 +1146,7 @@ window.showJoinGame=async function(){
   if(!code)return;
   
   try {
-    const response = await fetch(`http://localhost:3001/api/games/${code.toUpperCase()}`);
+    const response = await fetch(`${API_URL}/api/games/${code.toUpperCase()}`);
     
     if (!response.ok) {
       alert('Game not found. Please check the code and try again.');
@@ -1446,7 +1451,7 @@ window.installPWA = async function() {
 
 rSetup();
 </script>
-<script src="/dynamic-auth.bundle.js"></script>
-<script src="/app.js"></script>
+<script src="./dynamic-auth.bundle.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>

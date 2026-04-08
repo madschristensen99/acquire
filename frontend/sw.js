@@ -66,8 +66,8 @@ self.addEventListener('push', (event) => {
   let data = {
     title: 'Acquire',
     body: 'It\'s your turn!',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
+    icon: './icons/icon-192x192.png',
+    badge: './icons/icon-72x72.png',
     tag: 'turn-notification',
     requireInteraction: true,
     data: {

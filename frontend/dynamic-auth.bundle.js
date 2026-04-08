@@ -60718,7 +60718,7 @@ ${trace.payload.join("\n")}
     environmentId: "640fa485-6423-4a78-b63e-dce27c4b5f6d",
     metadata: {
       name: "Acquire Game",
-      url: window.location.origin
+      url: window.location.origin + window.location.pathname
     }
   });
   addEvmExtension();
