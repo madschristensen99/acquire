@@ -75,6 +75,7 @@ async function initDynamicWidget() {
       userInfo = savedUsername;
       window.currentUsername = savedUsername;
       showAuthenticatedUI(authContainer, userInfo);
+      updateAuthHeader(userInfo);
       return;
     }
     
@@ -84,6 +85,7 @@ async function initDynamicWidget() {
       userInfo = getUserInfo();
       window.currentUsername = userInfo;
       showAuthenticatedUI(authContainer, userInfo);
+      updateAuthHeader(userInfo);
       return;
     }
     
@@ -96,6 +98,7 @@ async function initDynamicWidget() {
         const userInfo = getUserInfo();
         window.currentUsername = userInfo;
         showAuthenticatedUI(authContainer, userInfo);
+        updateAuthHeader(userInfo);
       }
     }, client);
     
@@ -160,11 +163,15 @@ function showLoginUI(container) {
 // Make showLoginUI globally accessible
 window.showLoginUI = showLoginUI;
 
-function showAuthenticatedUI(container, userInfo) {
+function updateAuthHeader(userInfo) {
   const authSection = document.querySelector('.auth-section h3');
-  if (authSection) {
+  if (authSection && userInfo) {
     authSection.textContent = `Signed in as ${userInfo}`;
   }
+}
+
+function showAuthenticatedUI(container, userInfo) {
+  updateAuthHeader(userInfo);
   
   container.innerHTML = `
     <button class="btn" onclick="handleLogout()" style="width: 100%;">

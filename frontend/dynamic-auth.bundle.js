@@ -60759,6 +60759,7 @@ ${trace.payload.join("\n")}
         userInfo = savedUsername;
         window.currentUsername = savedUsername;
         showAuthenticatedUI(authContainer, userInfo);
+        updateAuthHeader(userInfo);
         return;
       }
       const accounts = await __getWalletAccounts_wrapped();
@@ -60766,6 +60767,7 @@ ${trace.payload.join("\n")}
         userInfo = getUserInfo();
         window.currentUsername = userInfo;
         showAuthenticatedUI(authContainer, userInfo);
+        updateAuthHeader(userInfo);
         return;
       }
       showLoginUI(authContainer);
@@ -60774,6 +60776,7 @@ ${trace.payload.join("\n")}
           const userInfo2 = getUserInfo();
           window.currentUsername = userInfo2;
           showAuthenticatedUI(authContainer, userInfo2);
+          updateAuthHeader(userInfo2);
         }
       }, client);
     } catch (error) {
@@ -60826,11 +60829,14 @@ ${trace.payload.join("\n")}
   `;
   }
   window.showLoginUI = showLoginUI;
-  function showAuthenticatedUI(container, userInfo) {
+  function updateAuthHeader(userInfo) {
     const authSection = document.querySelector(".auth-section h3");
-    if (authSection) {
+    if (authSection && userInfo) {
       authSection.textContent = `Signed in as ${userInfo}`;
     }
+  }
+  function showAuthenticatedUI(container, userInfo) {
+    updateAuthHeader(userInfo);
     container.innerHTML = `
     <button class="btn" onclick="handleLogout()" style="width: 100%;">
       Sign Out
