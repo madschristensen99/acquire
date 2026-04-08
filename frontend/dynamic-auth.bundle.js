@@ -60771,6 +60771,11 @@ ${trace.payload.join("\n")}
     }
   }
   function getUserInfo() {
+    const savedUsername = localStorage.getItem("dynamic_username");
+    if (savedUsername) {
+      window.currentUsername = savedUsername;
+      return savedUsername;
+    }
     const user = client.user;
     if (!user) return "User";
     if (user.email) return user.email;
@@ -60933,8 +60938,12 @@ ${trace.payload.join("\n")}
     try {
       await __verifyOTP_wrapped({ otpVerification, verificationToken: otp });
       await createWalletAfterAuth();
-      const userInfo = getUserInfo();
-      showAuthenticatedUI(document.getElementById("dynamic-auth"), userInfo);
+      let userInfo = getUserInfo();
+      if (userInfo === "User" || !userInfo) {
+        showUsernamePrompt();
+      } else {
+        showAuthenticatedUI(document.getElementById("dynamic-auth"), userInfo);
+      }
     } catch (error) {
       console.error("Error verifying OTP:", error);
       alert("Invalid code. Please try again.");
@@ -60954,6 +60963,8 @@ ${trace.payload.join("\n")}
   window.handleLogout = async function() {
     try {
       await __logout_wrapped();
+      localStorage.removeItem("dynamic_username");
+      window.currentUsername = null;
       showLoginUI(document.getElementById("dynamic-auth"));
       const authSection = document.querySelector(".auth-section h3");
       if (authSection) {

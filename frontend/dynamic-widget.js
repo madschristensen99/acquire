@@ -92,6 +92,13 @@ async function initDynamicWidget() {
 }
 
 function getUserInfo() {
+  // Check localStorage first for saved username
+  const savedUsername = localStorage.getItem('dynamic_username');
+  if (savedUsername) {
+    window.currentUsername = savedUsername;
+    return savedUsername;
+  }
+  
   // Access user data from client
   const user = client.user;
   if (!user) return 'User';
@@ -276,8 +283,14 @@ window.verifyOTPCode = async function() {
     await verifyOTP({ otpVerification, verificationToken: otp });
     await createWalletAfterAuth();
     
-    const userInfo = getUserInfo();
-    showAuthenticatedUI(document.getElementById('dynamic-auth'), userInfo);
+    let userInfo = getUserInfo();
+    
+    // If user authenticated with phone and has no email/username, prompt for username
+    if (userInfo === 'User' || !userInfo) {
+      showUsernamePrompt();
+    } else {
+      showAuthenticatedUI(document.getElementById('dynamic-auth'), userInfo);
+    }
   } catch (error) {
     console.error('Error verifying OTP:', error);
     alert('Invalid code. Please try again.');
@@ -299,6 +312,11 @@ window.signInWithGoogle = async function() {
 window.handleLogout = async function() {
   try {
     await logout();
+    
+    // Clear saved username
+    localStorage.removeItem('dynamic_username');
+    window.currentUsername = null;
+    
     showLoginUI(document.getElementById('dynamic-auth'));
     
     const authSection = document.querySelector('.auth-section h3');
