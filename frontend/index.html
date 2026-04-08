@@ -1006,9 +1006,20 @@ function rSetup(){
   <div class="divider"></div>
   <label>Game Mode</label>
   <div class="count-btns">
-    <button class="count-btn ${gameMode==='local'?'sel':''}" onclick="setGameMode('local')">Local</button>
-    <button class="count-btn ${gameMode==='online'?'sel':''}" onclick="setGameMode('online')" ${!isAuthenticated?'disabled title="Sign in to play online"':''}>
-      Online ${!isAuthenticated?'🔒':''}
+    <button class="count-btn ${gameMode==='local'?'sel':''}" onclick="setGameMode('local')" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+      </svg>
+      Local
+    </button>
+    <button class="count-btn ${gameMode==='online'?'sel':''}" onclick="setGameMode('online')" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      Online
     </button>
   </div>
   ${gameMode==='online'?`<p style="font-size:12px;color:var(--text-mid);margin:8px 0;">Invite friends to play online multiplayer</p>`:''}
