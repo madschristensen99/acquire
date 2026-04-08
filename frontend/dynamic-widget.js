@@ -68,7 +68,9 @@ async function initDynamicWidget() {
     // Check if already authenticated
     const accounts = await getWalletAccounts();
     if (accounts && accounts.length > 0) {
-      showAuthenticatedUI(authContainer, accounts[0].address);
+      // Get user info to display email/name instead of address
+      const userInfo = getUserInfo();
+      showAuthenticatedUI(authContainer, userInfo);
       return;
     }
     
@@ -78,13 +80,31 @@ async function initDynamicWidget() {
     // Listen for wallet changes
     onEvent({ event: 'walletAccountsChanged' }, (accounts) => {
       if (accounts && accounts.length > 0) {
-        showAuthenticatedUI(authContainer, accounts[0].address);
+        const userInfo = getUserInfo();
+        showAuthenticatedUI(authContainer, userInfo);
       }
     }, client);
     
   } catch (error) {
     console.error('Error initializing Dynamic widget:', error);
   }
+}
+
+function getUserInfo() {
+  // Access user data from client
+  const user = client.user;
+  if (!user) return 'User';
+  
+  // Prefer email, then username, then first verified credential
+  if (user.email) return user.email;
+  if (user.username) return user.username;
+  if (user.verifiedCredentials && user.verifiedCredentials.length > 0) {
+    const cred = user.verifiedCredentials[0];
+    if (cred.email) return cred.email;
+    if (cred.phoneNumber) return cred.phoneNumber;
+  }
+  
+  return 'User';
 }
 
 function showLoginUI(container) {
@@ -103,10 +123,10 @@ function showLoginUI(container) {
 // Make showLoginUI globally accessible
 window.showLoginUI = showLoginUI;
 
-function showAuthenticatedUI(container, address) {
+function showAuthenticatedUI(container, userInfo) {
   const authSection = document.querySelector('.auth-section h3');
   if (authSection) {
-    authSection.textContent = `Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
+    authSection.textContent = `Signed in as ${userInfo}`;
   }
   
   container.innerHTML = `
@@ -185,10 +205,8 @@ window.verifyOTPCode = async function() {
     await verifyOTP({ otpVerification, verificationToken: otp });
     await createWalletAfterAuth();
     
-    const accounts = await getWalletAccounts();
-    if (accounts && accounts.length > 0) {
-      showAuthenticatedUI(document.getElementById('dynamic-auth'), accounts[0].address);
-    }
+    const userInfo = getUserInfo();
+    showAuthenticatedUI(document.getElementById('dynamic-auth'), userInfo);
   } catch (error) {
     console.error('Error verifying OTP:', error);
     alert('Invalid code. Please try again.');
