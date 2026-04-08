@@ -982,7 +982,14 @@ function endGame(){
 
 // ═══ RENDER ═══
 const app=document.getElementById('app');
-let spc=3,sn=['','',''],sel=null,ba={},ms=0,mt=0,gameMode='local';
+let spc=3,sn=['','',''],sel=null,ba={},ms=0,mt=0,gameMode='local',gameCode=null,isHost=false;
+
+function generateGameCode(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code='';
+  for(let i=0;i<6;i++)code+=chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
 
 function rSetup(){
   // Check localStorage for saved username or Dynamic client user
@@ -1042,7 +1049,12 @@ function rSetup(){
       ${gameMode==='online'&&!isPlayer1?'<span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-mid);">👥</span>':''}
     </div>`;
   }).join('')}</div>
-  <button class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;" onclick="go()">${gameMode==='online'?'Create Game':'Start Game'}</button></div></div>`;
+  ${gameMode==='online'?`
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" style="flex:1;padding:10px;font-size:14px;" onclick="createOnlineGame()">Create Game</button>
+      <button class="btn" style="flex:1;padding:10px;font-size:14px;" onclick="showJoinGame()">Join Game</button>
+    </div>
+  `:`<button class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;" onclick="go()">Start Game</button>`}</div></div>`;
   checkPWAInstallable();
   
   // Auto-fill player 1 with authenticated user in online mode
@@ -1069,7 +1081,11 @@ window.setGameMode=function(mode){
   rSetup();
 };
 window.invitePlayer=function(idx){
-  alert('Player invitation feature coming soon!\n\nFor now, share your game link with friends and they can join by entering their name.');
+  if(!gameCode){
+    alert('Create the game first to get a shareable game code!');
+    return;
+  }
+  alert('Share game code with friends:\n\n'+gameCode+'\n\nThey can join by clicking "Join Game" on the setup screen.');
 };
 function getUserInfoFromClient(){
   if(!window.client || !window.client.user) return null;
@@ -1084,6 +1100,70 @@ function getUserInfoFromClient(){
   return null;
 };
 window.go=function(){const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);S=newGame(names);initC(S);S.msg=`${cpn()}, place a tile.`;sel=null;render();};
+
+window.createOnlineGame=function(){
+  gameCode=generateGameCode();
+  isHost=true;
+  const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);
+  S=newGame(names);
+  initC(S);
+  S.gameCode=gameCode;
+  S.isOnline=true;
+  S.msg=`${cpn()}, place a tile.`;
+  sel=null;
+  
+  // Store game in localStorage for joining players
+  localStorage.setItem('game_'+gameCode,JSON.stringify({host:window.currentUsername,players:names,created:Date.now()}));
+  
+  showGameCodeModal();
+};
+
+window.showJoinGame=function(){
+  const code=prompt('Enter game code:');
+  if(!code)return;
+  const gameData=localStorage.getItem('game_'+code.toUpperCase());
+  if(!gameData){
+    alert('Game not found. Please check the code and try again.');
+    return;
+  }
+  const game=JSON.parse(gameData);
+  alert(`Joining ${game.host}'s game...\n\nNote: Full multiplayer sync coming soon!\nFor now, this creates a local game with the same players.`);
+  sn=game.players;
+  go();
+};
+
+function showGameCodeModal(){
+  const modal=document.createElement('div');
+  modal.className='modal-overlay';
+  modal.innerHTML=`
+    <div class="modal">
+      <h2>Game Created!</h2>
+      <p>Share this code with your friends:</p>
+      <div style="background:var(--bg);border:2px solid var(--border-dark);border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:700;letter-spacing:4px;color:var(--text);">${gameCode}</div>
+      </div>
+      <p style="font-size:12px;color:var(--text-mid);">Players can join by clicking "Join Game" and entering this code.</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="copyGameCode()">Copy Code</button>
+        <button class="btn btn-primary" onclick="startGameWithCode()">Start Game</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+};
+
+window.copyGameCode=function(){
+  navigator.clipboard.writeText(gameCode).then(()=>{
+    alert('Game code copied to clipboard!');
+  }).catch(()=>{
+    alert('Code: '+gameCode);
+  });
+};
+
+window.startGameWithCode=function(){
+  document.querySelector('.modal-overlay').remove();
+  render();
+};
 window.clickC=function(idx){if(S.phase!=='place')return;const p=S.pl[S.cp];if(!p.hand.includes(idx))return;if(dead(idx))return;place(idx);render();};
 window.pickC=function(c){if(S.phase!=='found')return;found(c);render();};
 
