@@ -231,9 +231,38 @@ function showPhoneInput() {
   setTimeout(() => document.getElementById('phone-input').focus(), 100);
 }
 
+function showUsernamePrompt() {
+  const container = document.getElementById('dynamic-auth');
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <p style="font-size: 12px; color: var(--text-mid); margin: 0;">Choose a username for your account</p>
+      <input type="text" id="username-input" placeholder="Enter username" maxlength="20"
+        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Source Sans 3', sans-serif; font-size: 14px;" />
+      <button class="btn btn-primary" onclick="saveUsername()" style="width: 100%;">
+        Continue
+      </button>
+    </div>
+  `;
+  setTimeout(() => document.getElementById('username-input').focus(), 100);
+}
+
 // Global functions
 window.showEmailLogin = showEmailInput;
 window.showPhoneLogin = showPhoneInput;
+
+window.saveUsername = function() {
+  const username = document.getElementById('username-input').value.trim();
+  if (!username) {
+    alert('Please enter a username');
+    return;
+  }
+  
+  // Store username in localStorage for this session
+  localStorage.setItem('dynamic_username', username);
+  window.currentUsername = username;
+  
+  showAuthenticatedUI(document.getElementById('dynamic-auth'), username);
+};
 
 window.sendOTP = async function() {
   const email = document.getElementById('email-input').value.trim();
