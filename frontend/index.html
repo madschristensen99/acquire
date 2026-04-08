@@ -1101,35 +1101,67 @@ function getUserInfoFromClient(){
 };
 window.go=function(){const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);S=newGame(names);initC(S);S.msg=`${cpn()}, place a tile.`;sel=null;render();};
 
-window.createOnlineGame=function(){
+window.createOnlineGame=async function(){
   gameCode=generateGameCode();
   isHost=true;
   const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);
-  S=newGame(names);
-  initC(S);
-  S.gameCode=gameCode;
-  S.isOnline=true;
-  S.msg=`${cpn()}, place a tile.`;
-  sel=null;
   
-  // Store game in localStorage for joining players
-  localStorage.setItem('game_'+gameCode,JSON.stringify({host:window.currentUsername,players:names,created:Date.now()}));
-  
-  showGameCodeModal();
+  // Store game in MongoDB via Rust API
+  try {
+    const response = await fetch('http://localhost:3001/api/games', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        code: gameCode,
+        host: window.currentUsername,
+        players: names
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to create game');
+    }
+    
+    S=newGame(names);
+    initC(S);
+    S.gameCode=gameCode;
+    S.isOnline=true;
+    S.msg=`${cpn()}, place a tile.`;
+    sel=null;
+    
+    showGameCodeModal();
+  } catch (error) {
+    console.error('Error creating game:', error);
+    alert('Failed to create game. Please try again.');
+  }
 };
 
-window.showJoinGame=function(){
+window.showJoinGame=async function(){
   const code=prompt('Enter game code:');
   if(!code)return;
-  const gameData=localStorage.getItem('game_'+code.toUpperCase());
-  if(!gameData){
-    alert('Game not found. Please check the code and try again.');
-    return;
+  
+  try {
+    const response = await fetch(`http://localhost:3001/api/games/${code.toUpperCase()}`);
+    
+    if (!response.ok) {
+      alert('Game not found. Please check the code and try again.');
+      return;
+    }
+    
+    const data = await response.json();
+    if (!data.success || !data.game) {
+      alert('Game not found. Please check the code and try again.');
+      return;
+    }
+    
+    const game = data.game;
+    alert(`Joining ${game.host}'s game...\n\nNote: Full multiplayer sync coming soon!\nFor now, this creates a local game with the same players.`);
+    sn=game.players;
+    go();
+  } catch (error) {
+    console.error('Error joining game:', error);
+    alert('Failed to join game. Please try again.');
   }
-  const game=JSON.parse(gameData);
-  alert(`Joining ${game.host}'s game...\n\nNote: Full multiplayer sync coming soon!\nFor now, this creates a local game with the same players.`);
-  sn=game.players;
-  go();
 };
 
 function showGameCodeModal(){

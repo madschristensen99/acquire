@@ -1,8 +1,8 @@
 use axum::{
-    extract::{Json, State},
+    extract::{Json, State, Path},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,11 @@ use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, error};
 
+mod game_db;
+use game_db::{GameDatabase, Game};
+
 type Subscriptions = Arc<RwLock<HashMap<String, PushSubscription>>>;
+type GameDb = Arc<GameDatabase>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PushSubscription {
@@ -52,6 +56,25 @@ struct ApiResponse {
     message: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct CreateGameRequest {
+    code: String,
+    host: String,
+    players: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateGameStateRequest {
+    state: String,
+}
+
+#[derive(Debug, Serialize)]
+struct GameResponse {
+    success: bool,
+    game: Option<Game>,
+    message: Option<String>,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
@@ -64,6 +87,11 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let subscriptions: Subscriptions = Arc::new(RwLock::new(HashMap::new()));
+    
+    // Initialize MongoDB connection
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let game_db = Arc::new(GameDatabase::new(&database_url).await?);
+    info!("✅ Connected to MongoDB");
     
     let port = env::var("NOTIFICATION_PORT")
         .unwrap_or_else(|_| "3001".to_string())
@@ -80,8 +108,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/subscribe", post(subscribe))
         .route("/api/unsubscribe", post(unsubscribe))
         .route("/api/notify-turn", post(notify_turn))
+        .route("/api/games", post(create_game))
+        .route("/api/games/:code", get(get_game))
+        .route("/api/games/:code/state", put(update_game_state))
         .layer(cors)
-        .with_state(subscriptions.clone());
+        .with_state((subscriptions.clone(), game_db.clone()));
 
     let addr = format!("0.0.0.0:{}", port);
     info!("🚀 Notification server starting on {}", addr);
@@ -126,14 +157,14 @@ async fn health_check() -> impl IntoResponse {
 }
 
 async fn subscribe(
-    State(subscriptions): State<Subscriptions>,
-    Json(payload): Json<SubscribeRequest>,
+    State((subscriptions, _)): State<(Subscriptions, GameDb)>,
+    Json(req): Json<SubscribeRequest>,
 ) -> impl IntoResponse {
-    let player_address = payload.player_address.to_lowercase();
+    let player_address = req.player_address.to_lowercase();
     
     let subscription = PushSubscription {
-        endpoint: payload.endpoint,
-        keys: payload.keys,
+        endpoint: req.endpoint,
+        keys: req.keys,
     };
     
     subscriptions.write().await.insert(player_address.clone(), subscription);
@@ -150,7 +181,7 @@ async fn subscribe(
 }
 
 async fn unsubscribe(
-    State(subscriptions): State<Subscriptions>,
+    State((subscriptions, _)): State<(Subscriptions, GameDb)>,
     Json(payload): Json<UnsubscribeRequest>,
 ) -> impl IntoResponse {
     let player_address = payload.player_address.to_lowercase();
@@ -169,7 +200,7 @@ async fn unsubscribe(
 }
 
 async fn notify_turn(
-    State(subscriptions): State<Subscriptions>,
+    State((subscriptions, _)): State<(Subscriptions, GameDb)>,
     Json(payload): Json<NotifyRequest>,
 ) -> impl IntoResponse {
     let player_address = payload.player_address.to_lowercase();
@@ -262,6 +293,106 @@ async fn send_push_notification(
     client.send(message).await?;
     
     Ok(())
+}
+
+// Game API handlers
+async fn create_game(
+    State((_, game_db)): State<(Subscriptions, GameDb)>,
+    Json(req): Json<CreateGameRequest>,
+) -> impl IntoResponse {
+    match game_db.create_game(req.code.clone(), req.host, req.players).await {
+        Ok(game) => {
+            info!("✅ Created game: {}", req.code);
+            (
+                StatusCode::CREATED,
+                Json(GameResponse {
+                    success: true,
+                    game: Some(game),
+                    message: None,
+                }),
+            )
+        }
+        Err(e) => {
+            error!("❌ Failed to create game: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(GameResponse {
+                    success: false,
+                    game: None,
+                    message: Some(format!("Failed to create game: {}", e)),
+                }),
+            )
+        }
+    }
+}
+
+async fn get_game(
+    State((_, game_db)): State<(Subscriptions, GameDb)>,
+    Path(code): Path<String>,
+) -> impl IntoResponse {
+    match game_db.get_game(&code).await {
+        Ok(Some(game)) => {
+            info!("✅ Retrieved game: {}", code);
+            (
+                StatusCode::OK,
+                Json(GameResponse {
+                    success: true,
+                    game: Some(game),
+                    message: None,
+                }),
+            )
+        }
+        Ok(None) => {
+            (
+                StatusCode::NOT_FOUND,
+                Json(GameResponse {
+                    success: false,
+                    game: None,
+                    message: Some("Game not found".to_string()),
+                }),
+            )
+        }
+        Err(e) => {
+            error!("❌ Failed to get game: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(GameResponse {
+                    success: false,
+                    game: None,
+                    message: Some(format!("Failed to get game: {}", e)),
+                }),
+            )
+        }
+    }
+}
+
+async fn update_game_state(
+    State((_, game_db)): State<(Subscriptions, GameDb)>,
+    Path(code): Path<String>,
+    Json(req): Json<UpdateGameStateRequest>,
+) -> impl IntoResponse {
+    match game_db.update_game_state(&code, req.state).await {
+        Ok(_) => {
+            info!("✅ Updated game state: {}", code);
+            (
+                StatusCode::OK,
+                Json(ApiResponse {
+                    success: true,
+                    message: "Game state updated".to_string(),
+                }),
+            )
+        }
+        Err(e) => {
+            error!("❌ Failed to update game state: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse {
+                    success: false,
+                    message: format!("Failed to update game state: {}", e),
+                }),
+            )
+        }
+    }
 }
 
 async fn monitor_blockchain_events(
