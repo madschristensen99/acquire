@@ -60753,17 +60753,27 @@ ${trace.payload.join("\n")}
       return;
     }
     try {
+      const savedUsername = localStorage.getItem("dynamic_username");
+      let userInfo = null;
+      if (savedUsername) {
+        userInfo = savedUsername;
+        window.currentUsername = savedUsername;
+        showAuthenticatedUI(authContainer, userInfo);
+        return;
+      }
       const accounts = await __getWalletAccounts_wrapped();
       if (accounts && accounts.length > 0) {
-        const userInfo = getUserInfo();
+        userInfo = getUserInfo();
+        window.currentUsername = userInfo;
         showAuthenticatedUI(authContainer, userInfo);
         return;
       }
       showLoginUI(authContainer);
       __onEvent_wrapped({ event: "walletAccountsChanged" }, (accounts2) => {
         if (accounts2 && accounts2.length > 0) {
-          const userInfo = getUserInfo();
-          showAuthenticatedUI(authContainer, userInfo);
+          const userInfo2 = getUserInfo();
+          window.currentUsername = userInfo2;
+          showAuthenticatedUI(authContainer, userInfo2);
         }
       }, client);
     } catch (error) {
@@ -60920,6 +60930,9 @@ ${trace.payload.join("\n")}
     localStorage.setItem("dynamic_username", username);
     window.currentUsername = username;
     showAuthenticatedUI(document.getElementById("dynamic-auth"), username);
+    if (typeof rSetup === "function") {
+      setTimeout(() => rSetup(), 100);
+    }
   };
   window.sendOTP = async function() {
     const email2 = document.getElementById("email-input").value.trim();

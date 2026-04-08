@@ -66,11 +66,23 @@ async function initDynamicWidget() {
   }
 
   try {
-    // Check if already authenticated
+    // Check if already authenticated (check localStorage first, then wallet accounts)
+    const savedUsername = localStorage.getItem('dynamic_username');
+    let userInfo = null;
+    
+    if (savedUsername) {
+      // User authenticated with phone/SMS and set username
+      userInfo = savedUsername;
+      window.currentUsername = savedUsername;
+      showAuthenticatedUI(authContainer, userInfo);
+      return;
+    }
+    
     const accounts = await getWalletAccounts();
     if (accounts && accounts.length > 0) {
-      // Get user info to display email/name instead of address
-      const userInfo = getUserInfo();
+      // User authenticated with email/Google
+      userInfo = getUserInfo();
+      window.currentUsername = userInfo;
       showAuthenticatedUI(authContainer, userInfo);
       return;
     }
@@ -82,6 +94,7 @@ async function initDynamicWidget() {
     onEvent({ event: 'walletAccountsChanged' }, (accounts) => {
       if (accounts && accounts.length > 0) {
         const userInfo = getUserInfo();
+        window.currentUsername = userInfo;
         showAuthenticatedUI(authContainer, userInfo);
       }
     }, client);
@@ -262,6 +275,11 @@ window.saveUsername = function() {
   window.currentUsername = username;
   
   showAuthenticatedUI(document.getElementById('dynamic-auth'), username);
+  
+  // Trigger rSetup to update the game mode buttons
+  if (typeof rSetup === 'function') {
+    setTimeout(() => rSetup(), 100);
+  }
 };
 
 window.sendOTP = async function() {
