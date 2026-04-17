@@ -12,7 +12,10 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, error};
 
 mod game_db;
+mod player_notifications;
+
 use game_db::{GameDatabase, Game};
+use player_notifications::{subscribe_player, notify_game_players};
 
 type Subscriptions = Arc<RwLock<HashMap<String, PushSubscription>>>;
 type GameDb = Arc<GameDatabase>;
@@ -66,6 +69,7 @@ struct CreateGameRequest {
 #[derive(Debug, Deserialize)]
 struct UpdateGameStateRequest {
     state: String,
+    current_player: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -73,6 +77,21 @@ struct GameResponse {
     success: bool,
     game: Option<Game>,
     message: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SubscribePlayerRequest {
+    player_name: String,
+    game_code: String,
+    endpoint: String,
+    p256dh: String,
+    auth: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct NotifyTurnRequest {
+    game_code: String,
+    current_player_name: String,
 }
 
 #[tokio::main]
@@ -111,6 +130,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/games", post(create_game))
         .route("/api/games/:code", get(get_game))
         .route("/api/games/:code/state", put(update_game_state))
+        .route("/api/players/subscribe", post(subscribe_player))
+        .route("/api/players/notify-game", post(notify_game_players))
         .layer(cors)
         .with_state((subscriptions.clone(), game_db.clone()));
 
@@ -371,7 +392,7 @@ async fn update_game_state(
     Path(code): Path<String>,
     Json(req): Json<UpdateGameStateRequest>,
 ) -> impl IntoResponse {
-    match game_db.update_game_state(&code, req.state).await {
+    match game_db.update_game_state(&code, req.state, req.current_player).await {
         Ok(_) => {
             info!("✅ Updated game state: {}", code);
             (
