@@ -1134,6 +1134,18 @@ window.createOnlineGame=async function(){
     S.msg=`${cpn()}, place a tile.`;
     sel=null;
     
+    // Request notification permission for online games
+    if (window.requestNotificationPermission) {
+      showNotificationPrompt(
+        async () => {
+          await requestNotificationPermission(window.currentUsername, gameCode);
+        },
+        () => {
+          console.log('User declined notifications');
+        }
+      );
+    }
+    
     showGameCodeModal();
   } catch (error) {
     console.error('Error creating game:', error);
@@ -1160,6 +1172,20 @@ window.showJoinGame=async function(){
     }
     
     const game = data.game;
+    gameCode = code.toUpperCase();
+    
+    // Request notification permission for joining players
+    if (window.requestNotificationPermission && window.currentUsername) {
+      showNotificationPrompt(
+        async () => {
+          await requestNotificationPermission(window.currentUsername, gameCode);
+        },
+        () => {
+          console.log('User declined notifications');
+        }
+      );
+    }
+    
     alert(`Joining ${game.host}'s game...\n\nNote: Full multiplayer sync coming soon!\nFor now, this creates a local game with the same players.`);
     sn=game.players;
     go();
@@ -1451,6 +1477,7 @@ window.installPWA = async function() {
 
 rSetup();
 </script>
+<script src="./notifications.js"></script>
 <script src="./dynamic-auth.bundle.js"></script>
 <script src="./app.js"></script>
 </body>
