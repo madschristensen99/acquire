@@ -1055,10 +1055,28 @@ async function loadMyGames() {
     const gamesSection = document.getElementById('my-games-section');
     if (!gamesSection) return;
     
-    const gamesHTML = data.games.map(game => {
+    // Separate games by turn status
+    const yourTurnGames = [];
+    const waitingGames = [];
+    
+    data.games.forEach(game => {
+      const currentPlayerIndex = game.current_player || 0;
+      const currentPlayerName = game.players[currentPlayerIndex];
+      const isYourTurn = currentPlayerName === window.currentUsername;
+      
+      if (isYourTurn) {
+        yourTurnGames.push(game);
+      } else {
+        waitingGames.push(game);
+      }
+    });
+    
+    const renderGameList = (games) => games.map(game => {
       const isHost = game.host === window.currentUsername;
       const playerCount = game.players.length;
       const createdDate = new Date(game.created_at).toLocaleDateString();
+      const currentPlayerIndex = game.current_player || 0;
+      const currentPlayerName = game.players[currentPlayerIndex];
       
       return `
         <div class="game-item" onclick="resumeGame('${game.code}')">
@@ -1066,6 +1084,7 @@ async function loadMyGames() {
             <div class="game-code">${game.code}</div>
             <div class="game-details">
               ${isHost ? '👑 Host' : '🎮 Player'} • ${playerCount} players • ${createdDate}
+              ${currentPlayerName !== window.currentUsername ? `<br>Waiting for ${currentPlayerName}` : ''}
             </div>
           </div>
           <button class="btn-resume">Resume</button>
@@ -1073,10 +1092,27 @@ async function loadMyGames() {
       `;
     }).join('');
     
-    gamesSection.innerHTML = `
-      <h3 style="margin-bottom:12px;">My Games</h3>
-      <div class="games-list">${gamesHTML}</div>
-    `;
+    let html = '<h3 style="margin-bottom:12px;">My Games</h3>';
+    
+    if (yourTurnGames.length > 0) {
+      html += `
+        <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;">
+          ⏰ Your Turn (${yourTurnGames.length})
+        </div>
+        <div class="games-list" style="margin-bottom:16px;">${renderGameList(yourTurnGames)}</div>
+      `;
+    }
+    
+    if (waitingGames.length > 0) {
+      html += `
+        <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;">
+          ⏳ Waiting (${waitingGames.length})
+        </div>
+        <div class="games-list">${renderGameList(waitingGames)}</div>
+      `;
+    }
+    
+    gamesSection.innerHTML = html;
   } catch (error) {
     console.error('Failed to load games:', error);
   }
@@ -1223,7 +1259,9 @@ window.createOnlineGame=async function(){
     });
     
     if (!response.ok) {
-      throw new Error('Failed to create game');
+      const errorData = await response.json();
+      alert(errorData.message || 'Failed to create game');
+      return;
     }
     
     // Initialize blockchain if available

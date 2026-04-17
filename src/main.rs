@@ -322,27 +322,43 @@ async fn create_game(
     State((_, game_db)): State<(Subscriptions, GameDb)>,
     Json(req): Json<CreateGameRequest>,
 ) -> impl IntoResponse {
-    match game_db.create_game(req.code.clone(), req.host, req.players).await {
+    // Check if user already has 4 or more active games
+    match game_db.get_player_games(&req.host).await {
+        Ok(existing_games) => {
+            if existing_games.len() >= 4 {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "success": false,
+                        "message": "You have reached the maximum of 4 active games. Please finish or delete an existing game first.",
+                    })),
+                );
+            }
+        }
+        Err(e) => {
+            error!("❌ Failed to check existing games: {}", e);
+        }
+    }
+    
+    match game_db.create_game(req.code, req.host, req.players).await {
         Ok(game) => {
-            info!("✅ Created game: {}", req.code);
+            info!("✅ Created game: {}", game.code);
             (
                 StatusCode::CREATED,
-                Json(GameResponse {
-                    success: true,
-                    game: Some(game),
-                    message: None,
-                }),
+                Json(serde_json::json!({
+                    "success": true,
+                    "game": game,
+                })),
             )
         }
         Err(e) => {
             error!("❌ Failed to create game: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(GameResponse {
-                    success: false,
-                    game: None,
-                    message: Some(format!("Failed to create game: {}", e)),
-                }),
+                Json(serde_json::json!({
+                    "success": false,
+                    "message": format!("Failed to create game: {}", e),
+                })),
             )
         }
     }
