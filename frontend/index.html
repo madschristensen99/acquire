@@ -1026,14 +1026,28 @@ function generateGameCode(){
 }
 
 async function loadMyGames() {
-  if (!window.currentUsername) return;
+  if (!window.currentUsername) {
+    console.log('⚠️ No currentUsername set, cannot load games');
+    return;
+  }
+  
+  console.log('🔍 Loading games for user:', window.currentUsername);
   
   try {
-    const response = await fetch(`${API_URL}/api/players/${encodeURIComponent(window.currentUsername)}/games`);
-    if (!response.ok) return;
+    const url = `${API_URL}/api/players/${encodeURIComponent(window.currentUsername)}/games`;
+    console.log('📡 Fetching:', url);
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.log('❌ Response not OK:', response.status);
+      return;
+    }
     
     const data = await response.json();
-    if (!data.success || !data.games || data.games.length === 0) return;
+    console.log('✅ Games data:', data);
+    if (!data.success || !data.games || data.games.length === 0) {
+      console.log('⚠️ No games found or empty array');
+      return;
+    }
     
     const gamesSection = document.getElementById('my-games-section');
     if (!gamesSection) return;
@@ -1554,14 +1568,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
   checkPWAInstallable();
-  if (window.initDynamicWidget) {
-    window.initDynamicWidget();
-  }
-  
-  // Load existing games for authenticated users
-  if (isAuthenticated) {
-    setTimeout(() => loadMyGames(), 500);
-  }
 });
 
 window.addEventListener('appinstalled', () => {
