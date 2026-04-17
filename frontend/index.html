@@ -765,11 +765,14 @@ header {
 }
 .btn-resume {
   padding: 6px 16px; font-size: 12px; font-weight: 600;
-  background: var(--imperial); color: white; border: none;
+  background: var(--bg-board); color: var(--text); 
+  border: 1px solid var(--border-dark);
   border-radius: 4px; cursor: pointer; transition: all 0.15s;
 }
 .btn-resume:hover {
-  background: var(--continental); transform: scale(1.05);
+  background: var(--text); color: var(--bg); 
+  border-color: var(--text);
+  transform: scale(1.05);
 }
 
 /* Scrollbar */
@@ -1158,7 +1161,7 @@ function rSetup(){
   // Load existing games for authenticated users
   if (isAuthenticated && window.currentUsername) {
     console.log('🎮 Attempting to load games for:', window.currentUsername);
-    setTimeout(() => loadMyGames(), 1000);
+    loadMyGames();
   } else {
     console.log('⚠️ Not loading games - isAuthenticated:', isAuthenticated, 'currentUsername:', window.currentUsername);
   }
