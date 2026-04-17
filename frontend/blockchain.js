@@ -11,18 +11,21 @@ let contract = null;
 let provider = null;
 let signer = null;
 
-// Initialize Cofhe SDK
+// Initialize Cofhe SDK with Dynamic wallet
 export async function initBlockchain() {
-  if (typeof window.ethereum === 'undefined') {
-    throw new Error('Please install MetaMask to play on-chain');
+  if (!window.client) {
+    throw new Error('Please sign in with Dynamic first');
   }
 
   try {
-    // Request wallet connection
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    // Get Dynamic's embedded wallet provider
+    const dynamicProvider = await window.client.getWalletClient();
+    if (!dynamicProvider) {
+      throw new Error('No wallet connected. Please sign in first.');
+    }
     
-    // Create ethers provider and signer
-    provider = new ethers.BrowserProvider(window.ethereum);
+    // Create ethers provider and signer from Dynamic wallet
+    provider = new ethers.BrowserProvider(dynamicProvider);
     signer = await provider.getSigner();
     
     // Load contract ABI
@@ -165,6 +168,22 @@ export function listenForGameEvents(onTilePlaced, onTurnChanged) {
       console.error('Error checking turn:', error);
     }
   }, 5000); // Check every 5 seconds
+}
+
+// Auto-initialize when Dynamic client is ready
+if (window.client) {
+  // Wait for wallet to be ready
+  setTimeout(async () => {
+    try {
+      const walletClient = await window.client.getWalletClient();
+      if (walletClient) {
+        await initBlockchain();
+        console.log('✅ Blockchain auto-initialized with Dynamic wallet');
+      }
+    } catch (error) {
+      console.log('⏳ Blockchain will initialize after sign-in');
+    }
+  }, 1000);
 }
 
 // Export for global access
