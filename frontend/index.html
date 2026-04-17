@@ -756,6 +756,13 @@ header {
   background: var(--bg-board); border-color: var(--border-dark);
   transform: translateX(4px);
 }
+.game-item.your-turn {
+  border-left: 4px solid var(--imperial);
+  background: linear-gradient(90deg, rgba(212, 160, 23, 0.05) 0%, var(--bg-card) 100%);
+}
+.game-item.your-turn:hover {
+  background: linear-gradient(90deg, rgba(212, 160, 23, 0.1) 0%, var(--bg-board) 100%);
+}
 .game-code {
   font-family: 'IBM Plex Mono', monospace; font-size: 16px;
   font-weight: 700; color: var(--text);
