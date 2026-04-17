@@ -742,6 +742,35 @@ header {
   background: var(--bg-board); border-color: var(--text);
 }
 
+/* My Games Section */
+.games-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 200px; overflow-y: auto;
+}
+.game-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 6px; cursor: pointer; transition: all 0.15s;
+}
+.game-item:hover {
+  background: var(--bg-board); border-color: var(--border-dark);
+  transform: translateX(4px);
+}
+.game-code {
+  font-family: 'IBM Plex Mono', monospace; font-size: 16px;
+  font-weight: 700; color: var(--text);
+}
+.game-details {
+  font-size: 11px; color: var(--text-mid); margin-top: 4px;
+}
+.btn-resume {
+  padding: 6px 16px; font-size: 12px; font-weight: 600;
+  background: var(--imperial); color: white; border: none;
+  border-radius: 4px; cursor: pointer; transition: all 0.15s;
+}
+.btn-resume:hover {
+  background: var(--continental); transform: scale(1.05);
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
@@ -996,6 +1025,50 @@ function generateGameCode(){
   return code;
 }
 
+async function loadMyGames() {
+  if (!window.currentUsername) return;
+  
+  try {
+    const response = await fetch(`${API_URL}/api/players/${encodeURIComponent(window.currentUsername)}/games`);
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    if (!data.success || !data.games || data.games.length === 0) return;
+    
+    const gamesSection = document.getElementById('my-games-section');
+    if (!gamesSection) return;
+    
+    const gamesHTML = data.games.map(game => {
+      const isHost = game.host === window.currentUsername;
+      const playerCount = game.players.length;
+      const createdDate = new Date(game.created_at).toLocaleDateString();
+      
+      return `
+        <div class="game-item" onclick="resumeGame('${game.code}')">
+          <div class="game-info">
+            <div class="game-code">${game.code}</div>
+            <div class="game-details">
+              ${isHost ? '👑 Host' : '🎮 Player'} • ${playerCount} players • ${createdDate}
+            </div>
+          </div>
+          <button class="btn-resume">Resume</button>
+        </div>
+      `;
+    }).join('');
+    
+    gamesSection.innerHTML = `
+      <h3 style="margin-bottom:12px;">My Games</h3>
+      <div class="games-list">${gamesHTML}</div>
+    `;
+  } catch (error) {
+    console.error('Failed to load games:', error);
+  }
+}
+
+window.resumeGame = async function(code) {
+  await window.showJoinGame(code);
+};
+
 function rSetup(){
   // Check localStorage for saved username or Dynamic client user
   const savedUsername = localStorage.getItem('dynamic_username');
@@ -1022,6 +1095,7 @@ function rSetup(){
     </div>
   </div>
   <div class="divider"></div>
+  ${isAuthenticated ? '<div id="my-games-section"></div><div class="divider"></div>' : ''}
   <label>Game Mode</label>
   <div class="count-btns">
     <button class="count-btn ${gameMode==='local'?'sel':''}" onclick="setGameMode('local')" style="display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -1165,8 +1239,8 @@ window.createOnlineGame=async function(){
   }
 };
 
-window.showJoinGame=async function(){
-  const code=prompt('Enter game code:');
+window.showJoinGame=async function(gameCode){
+  const code = gameCode || prompt('Enter game code:');
   if(!code)return;
   
   try {
@@ -1480,6 +1554,14 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
   checkPWAInstallable();
+  if (window.initDynamicWidget) {
+    window.initDynamicWidget();
+  }
+  
+  // Load existing games for authenticated users
+  if (isAuthenticated) {
+    setTimeout(() => loadMyGames(), 500);
+  }
 });
 
 window.addEventListener('appinstalled', () => {

@@ -81,6 +81,24 @@ impl GameDatabase {
         Ok(())
     }
     
+    pub async fn get_player_games(&self, player_name: &str) -> Result<Vec<Game>> {
+        let filter = doc! { 
+            "$or": [
+                { "host": player_name },
+                { "players": player_name }
+            ]
+        };
+        let mut cursor = self.games_collection.find(filter, None).await?;
+        let mut games = Vec::new();
+        
+        use futures::stream::StreamExt;
+        while let Some(result) = cursor.next().await {
+            games.push(result?);
+        }
+        
+        Ok(games)
+    }
+    
     // Subscription management
     pub async fn subscribe_player(&self, player_name: String, game_code: String, endpoint: String, p256dh: String, auth: String) -> Result<()> {
         let subscription = PlayerSubscription {

@@ -130,6 +130,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/games", post(create_game))
         .route("/api/games/:code", get(get_game))
         .route("/api/games/:code/state", put(update_game_state))
+        .route("/api/players/:player_name/games", get(get_player_games))
         .route("/api/players/subscribe", post(subscribe_player))
         .route("/api/players/notify-game", post(notify_game_players))
         .layer(cors)
@@ -411,6 +412,34 @@ async fn update_game_state(
                     success: false,
                     message: format!("Failed to update game state: {}", e),
                 }),
+            )
+        }
+    }
+}
+
+async fn get_player_games(
+    State((_, game_db)): State<(Subscriptions, GameDb)>,
+    Path(player_name): Path<String>,
+) -> impl IntoResponse {
+    match game_db.get_player_games(&player_name).await {
+        Ok(games) => {
+            info!("✅ Retrieved {} games for player: {}", games.len(), player_name);
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "games": games,
+                })),
+            )
+        }
+        Err(e) => {
+            error!("❌ Failed to get player games: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "success": false,
+                    "message": format!("Failed to get player games: {}", e),
+                })),
             )
         }
     }
