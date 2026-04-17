@@ -117,9 +117,10 @@ pub async fn notify_game_players(
                     Ok(signature) => {
                         match web_push::WebPushMessageBuilder::new(&subscription_info) {
                             Ok(mut builder) => {
+                                let payload_str = payload.to_string();
                                 builder.set_payload(
                                     web_push::ContentEncoding::Aes128Gcm,
-                                    payload.to_string().as_bytes()
+                                    payload_str.as_bytes()
                                 );
                                 builder.set_vapid_signature(signature);
                                 

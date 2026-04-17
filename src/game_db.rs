@@ -69,11 +69,12 @@ impl GameDatabase {
     
     pub async fn update_game_state(&self, code: &str, state: String, current_player: usize) -> Result<()> {
         let filter = doc! { "code": code };
+        let now = mongodb::bson::DateTime::now();
         let update = doc! { 
             "$set": { 
                 "state": state,
                 "current_player": current_player as i32,
-                "last_updated": Utc::now(),
+                "last_updated": now,
             } 
         };
         self.games_collection.update_one(filter, update, None).await?;
