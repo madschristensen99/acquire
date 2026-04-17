@@ -1299,7 +1299,13 @@ window.showJoinGame=async function(gameCode){
     
     alert(`Joining ${game.host}'s game...\n\nNote: Full multiplayer sync coming soon!\nFor now, this creates a local game with the same players.`);
     sn=game.players;
-    go();
+    S=newGame(game.players);
+    initC(S);
+    S.gameCode=gameCode;
+    S.isOnline=true;
+    S.msg=`${cpn()}, place a tile.`;
+    sel=null;
+    render();
   } catch (error) {
     console.error('Error joining game:', error);
     alert('Failed to join game. Please try again.');
@@ -1344,27 +1350,35 @@ window.clickC=async function(idx){
   if(!p.hand.includes(idx))return;
   if(dead(idx))return;
   
-  // If online game, check if it's our turn and place on blockchain
-  if(S.isOnline && window.blockchainAPI) {
-    try {
-      const isMyTurn = await window.blockchainAPI.isMyTurn();
-      if(!isMyTurn) {
-        alert('Not your turn! Wait for other players to move.');
-        return;
-      }
-      
-      // Calculate x, y from tile index
-      const x = idx % 12;
-      const y = Math.floor(idx / 12);
-      const tileIndex = p.hand.indexOf(idx);
-      
-      // Place tile on blockchain with FHE encryption
-      await window.blockchainAPI.placeTile(tileIndex, x, y);
-      console.log(`✅ Tile placed on-chain at (${x}, ${y})`);
-    } catch (error) {
-      console.error('Blockchain error:', error);
-      alert('Failed to place tile on blockchain: ' + error.message);
+  // If online game, validate it's the current player's turn
+  if(S.isOnline) {
+    const currentPlayerName = S.pl[S.cp].name;
+    if(currentPlayerName !== window.currentUsername) {
+      alert(`Not your turn! It's ${currentPlayerName}'s turn.`);
       return;
+    }
+    
+    // Try blockchain if available
+    if(window.blockchainAPI) {
+      try {
+        const isMyTurn = await window.blockchainAPI.isMyTurn();
+        if(!isMyTurn) {
+          alert('Not your turn! Wait for other players to move.');
+          return;
+        }
+        
+        // Calculate x, y from tile index
+        const x = idx % 12;
+        const y = Math.floor(idx / 12);
+        const tileIndex = p.hand.indexOf(idx);
+        
+        // Place tile on blockchain with FHE encryption
+        await window.blockchainAPI.placeTile(tileIndex, x, y);
+        console.log(`✅ Tile placed on-chain at (${x}, ${y})`);
+      } catch (error) {
+        console.warn('Blockchain not available:', error);
+        // Continue with local game if blockchain fails
+      }
     }
   }
   
