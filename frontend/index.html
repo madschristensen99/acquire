@@ -1127,6 +1127,18 @@ window.createOnlineGame=async function(){
       throw new Error('Failed to create game');
     }
     
+    // Initialize blockchain if available
+    if (window.blockchainAPI) {
+      try {
+        await window.blockchainAPI.init();
+        // Join the game on-chain as first player
+        const playerId = await window.blockchainAPI.joinGame();
+        console.log(`✅ Joined on-chain game as player ${playerId}`);
+      } catch (error) {
+        console.warn('Blockchain not available, playing off-chain:', error);
+      }
+    }
+    
     S=newGame(names);
     initC(S);
     S.gameCode=gameCode;
@@ -1227,7 +1239,39 @@ window.startGameWithCode=function(){
   document.querySelector('.modal-overlay').remove();
   render();
 };
-window.clickC=function(idx){if(S.phase!=='place')return;const p=S.pl[S.cp];if(!p.hand.includes(idx))return;if(dead(idx))return;place(idx);render();};
+window.clickC=async function(idx){
+  if(S.phase!=='place')return;
+  const p=S.pl[S.cp];
+  if(!p.hand.includes(idx))return;
+  if(dead(idx))return;
+  
+  // If online game, check if it's our turn and place on blockchain
+  if(S.isOnline && window.blockchainAPI) {
+    try {
+      const isMyTurn = await window.blockchainAPI.isMyTurn();
+      if(!isMyTurn) {
+        alert('Not your turn! Wait for other players to move.');
+        return;
+      }
+      
+      // Calculate x, y from tile index
+      const x = idx % 12;
+      const y = Math.floor(idx / 12);
+      const tileIndex = p.hand.indexOf(idx);
+      
+      // Place tile on blockchain with FHE encryption
+      await window.blockchainAPI.placeTile(tileIndex, x, y);
+      console.log(`✅ Tile placed on-chain at (${x}, ${y})`);
+    } catch (error) {
+      console.error('Blockchain error:', error);
+      alert('Failed to place tile on blockchain: ' + error.message);
+      return;
+    }
+  }
+  
+  place(idx);
+  render();
+};
 window.pickC=function(c){if(S.phase!=='found')return;found(c);render();};
 
 function render(){
