@@ -1035,6 +1035,25 @@ function generateGameCode(){
   return code;
 }
 
+function showModal(title, message, buttons = [{label: 'OK', primary: true}]) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.onclick = () => modal.remove();
+  
+  const buttonHTML = buttons.map(btn => 
+    `<button class="btn ${btn.primary ? 'btn-primary' : ''}" onclick="${btn.onClick ? btn.onClick + ';' : ''}this.closest('.modal-overlay').remove()">${btn.label}</button>`
+  ).join('');
+  
+  modal.innerHTML = `
+    <div class="modal" style="max-width:400px;" onclick="event.stopPropagation()">
+      <h2>${title}</h2>
+      <p style="white-space:pre-wrap;">${message}</p>
+      <div class="modal-actions">${buttonHTML}</div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
 function renderGamesIntoSection(gamesSection, games) {
   // Separate games by turn status
   const yourTurnGames = [];
@@ -1058,14 +1077,15 @@ function renderGamesIntoSection(gamesSection, games) {
     const createdDate = new Date(game.created_at).toLocaleDateString();
     const currentPlayerIndex = game.current_player || 0;
     const currentPlayerName = game.players[currentPlayerIndex];
+    const isYourTurn = currentPlayerName === window.currentUsername;
     
     return `
-      <div class="game-item" onclick="resumeGame('${game.code}')">
+      <div class="game-item ${isYourTurn ? 'your-turn' : ''}" onclick="resumeGame('${game.code}')">
         <div class="game-info">
           <div class="game-code">${game.code}</div>
           <div class="game-details">
             ${isHost ? '👑 Host' : '🎮 Player'} • ${playerCount} players • ${createdDate}
-            ${currentPlayerName !== window.currentUsername ? `<br>Waiting for ${currentPlayerName}` : ''}
+            ${!isYourTurn ? `<br>Waiting for ${currentPlayerName}` : '<br><strong style="color:var(--imperial);">Your turn!</strong>'}
           </div>
         </div>
         <button class="btn-resume">Resume</button>
@@ -1230,7 +1250,7 @@ window.setGameMode=function(mode){
   const currentUser = savedUsername || dynamicUser || window.currentUsername;
   
   if(mode==='online' && !currentUser){
-    alert('Please sign in to play online multiplayer');
+    showModal('Sign In Required', 'Please sign in to play online multiplayer');
     return;
   }
   gameMode=mode;
@@ -1242,10 +1262,13 @@ window.setGameMode=function(mode){
 };
 window.invitePlayer=function(idx){
   if(!gameCode){
-    alert('Create the game first to get a shareable game code!');
+    showModal('No Game Code', 'Create the game first to get a shareable game code!');
     return;
   }
-  alert('Share game code with friends:\n\n'+gameCode+'\n\nThey can join by clicking "Join Game" on the setup screen.');
+  showModal('Share Game Code', `Game Code: ${gameCode}\n\nShare this code with friends. They can join by clicking "Join Game" on the setup screen.`, [
+    {label: 'Copy Code', primary: true, onClick: `navigator.clipboard.writeText('${gameCode}')`},
+    {label: 'Close', primary: false}
+  ]);
 };
 function getUserInfoFromClient(){
   if(!window.client || !window.client.user) return null;
@@ -1280,7 +1303,7 @@ window.createOnlineGame=async function(){
     
     if (!response.ok) {
       const errorData = await response.json();
-      alert(errorData.message || 'Failed to create game');
+      showModal('Error', errorData.message || 'Failed to create game');
       return;
     }
     
@@ -1318,7 +1341,7 @@ window.createOnlineGame=async function(){
     showGameCodeModal();
   } catch (error) {
     console.error('Error creating game:', error);
-    alert('Failed to create game. Please try again.');
+    showModal('Error', 'Failed to create game. Please try again.');
   }
 };
 
@@ -1330,13 +1353,13 @@ window.showJoinGame=async function(gameCode){
     const response = await fetch(`${API_URL}/api/games/${code.toUpperCase()}`);
     
     if (!response.ok) {
-      alert('Game not found. Please check the code and try again.');
+      showModal('Game Not Found', 'Please check the code and try again.');
       return;
     }
     
     const data = await response.json();
     if (!data.success || !data.game) {
-      alert('Game not found. Please check the code and try again.');
+      showModal('Game Not Found', 'Please check the code and try again.');
       return;
     }
     
@@ -1355,7 +1378,6 @@ window.showJoinGame=async function(gameCode){
       );
     }
     
-    alert(`Joining ${game.host}'s game...\n\nNote: Full multiplayer sync coming soon!\nFor now, this creates a local game with the same players.`);
     sn=game.players;
     S=newGame(game.players);
     initC(S);
@@ -1366,7 +1388,7 @@ window.showJoinGame=async function(gameCode){
     render();
   } catch (error) {
     console.error('Error joining game:', error);
-    alert('Failed to join game. Please try again.');
+    showModal('Error', 'Failed to join game. Please try again.');
   }
 };
 
@@ -1392,9 +1414,9 @@ function showGameCodeModal(){
 
 window.copyGameCode=function(){
   navigator.clipboard.writeText(gameCode).then(()=>{
-    alert('Game code copied to clipboard!');
+    showModal('Copied!', 'Game code copied to clipboard!');
   }).catch(()=>{
-    alert('Code: '+gameCode);
+    showModal('Game Code', gameCode);
   });
 };
 
@@ -1412,7 +1434,7 @@ window.clickC=async function(idx){
   if(S.isOnline) {
     const currentPlayerName = S.pl[S.cp].name;
     if(currentPlayerName !== window.currentUsername) {
-      alert(`Not your turn! It's ${currentPlayerName}'s turn.`);
+      showModal('Not Your Turn', `It's ${currentPlayerName}'s turn.`);
       return;
     }
     
@@ -1421,7 +1443,7 @@ window.clickC=async function(idx){
       try {
         const isMyTurn = await window.blockchainAPI.isMyTurn();
         if(!isMyTurn) {
-          alert('Not your turn! Wait for other players to move.');
+          showModal('Not Your Turn', 'Wait for other players to move.');
           return;
         }
         
@@ -1626,9 +1648,9 @@ window.shareGame=function(text){
   if(navigator.share){
     navigator.share({title:'Acquire Game Results',text:text,url:window.location.href}).catch(e=>console.log('Share failed',e));
   }else if(navigator.clipboard){
-    navigator.clipboard.writeText(text).then(()=>alert('Results copied to clipboard!')).catch(()=>alert('Failed to copy'));
+    navigator.clipboard.writeText(text).then(()=>showModal('Copied!', 'Results copied to clipboard!')).catch(()=>showModal('Error', 'Failed to copy'));
   }else{
-    alert(text);
+    showModal('Game Results', text);
   }
 };
 window.viewLog=function(){
@@ -1679,7 +1701,7 @@ function checkPWAInstallable() {
 
 window.installPWA = async function() {
   if (!deferredPrompt) {
-    alert('App is already installed or installation is not available');
+    showModal('PWA Install', 'App is already installed or installation is not available');
     return;
   }
   
