@@ -16,6 +16,14 @@ async function requestNotificationPermission(playerName, gameCode) {
   }
 
   try {
+    // Ensure service worker is registered
+    let registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) {
+      console.log('Registering service worker...');
+      registration = await navigator.serviceWorker.register('./sw.js');
+      await navigator.serviceWorker.ready;
+    }
+
     // Request permission
     const permission = await Notification.requestPermission();
     notificationPermission = permission;
@@ -25,8 +33,13 @@ async function requestNotificationPermission(playerName, gameCode) {
       return false;
     }
 
-    // Get service worker registration
-    const registration = await navigator.serviceWorker.ready;
+    // Wait for service worker to be ready
+    registration = await navigator.serviceWorker.ready;
+    
+    if (!registration.pushManager) {
+      console.error('Push manager not available');
+      return false;
+    }
 
     // Get VAPID public key from server (you'll need to expose this)
     const vapidPublicKey = await getVapidPublicKey();
