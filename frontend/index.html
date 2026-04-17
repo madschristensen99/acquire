@@ -859,7 +859,7 @@ function cs(c){return S.chains[c]?S.chains[c].size:0;}
 function safe(c){return cs(c)>=11;}
 function avC(){return CHAINS.filter(c=>!S.ca[c]);}
 function acC(){return CHAINS.filter(c=>S.ca[c]);}
-function dead(i){const a=adj(i);const ac=new Set();a.forEach(x=>{const v=S.board[x];if(v&&v!=='placed'&&S.ca[v])ac.add(v);});return[...ac].filter(c=>safe(c)).length>=2;}
+function dead(i){const a=adj(i);const ac=new Set();const ap=[];a.forEach(x=>{const v=S.board[x];if(v==='placed')ap.push(x);else if(v&&v!=='placed'&&S.ca[v])ac.add(v);});if([...ac].filter(c=>safe(c)).length>=2)return true;if(ac.size===0&&ap.length>0&&avC().length===0)return true;return false;}
 function cpn(){return S.pl[S.cp].name;}
 function log(m){S.log.push(m);}
 
