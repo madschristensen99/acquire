@@ -1141,14 +1141,22 @@ window.loadMyGames = async function() {
     
     const data = await response.json();
     console.log('✅ Games data:', data);
+    console.log('✅ data.success:', data.success);
+    console.log('✅ data.games:', data.games);
+    console.log('✅ data.games.length:', data.games ? data.games.length : 'undefined');
+    
     if (!data.success || !data.games || data.games.length === 0) {
       console.log('⚠️ No games found or empty array');
       return;
     }
     
+    console.log('🔍 Looking for my-games-section element...');
     const gamesSection = document.getElementById('my-games-section');
+    console.log('📍 gamesSection element:', gamesSection);
+    
     if (!gamesSection) {
       console.log('⚠️ my-games-section not found in DOM');
+      console.log('📄 Current app.innerHTML length:', document.getElementById('app')?.innerHTML.length);
       return;
     }
     
