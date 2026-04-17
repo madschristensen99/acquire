@@ -1115,17 +1115,7 @@ window.loadMyGames = async function() {
     
     const gamesSection = document.getElementById('my-games-section');
     if (!gamesSection) {
-      console.log('⚠️ my-games-section not found, re-rendering setup screen');
-      rSetup();
-      // Try again after render
-      setTimeout(() => {
-        const section = document.getElementById('my-games-section');
-        if (!section) {
-          console.log('❌ Still no my-games-section after rSetup');
-          return;
-        }
-        renderGamesIntoSection(section, data.games);
-      }, 100);
+      console.log('⚠️ my-games-section not found in DOM');
       return;
     }
     
@@ -1151,7 +1141,7 @@ function rSetup(){
   
   app.innerHTML=`<div class="setup"><div class="setup-box"><h1>Acquire</h1><p class="sub">A game of high finance and hotel chains</p><div class="divider"></div>
   <div class="auth-section">
-    <h3>Sign In for Online Multiplayer</h3>
+    <h3>${isAuthenticated ? `Signed in as ${currentUser}` : 'Sign In for Online Multiplayer'}</h3>
     <div id="dynamic-auth"></div>
     <div class="pwa-install" id="pwa-install">
       <button class="btn-install-pwa" onclick="installPWA()">
@@ -1165,7 +1155,8 @@ function rSetup(){
     </div>
   </div>
   <div class="divider"></div>
-  ${isAuthenticated ? '<div id="my-games-section"></div><div class="divider"></div>' : ''}
+  <div id="my-games-section"></div>
+  ${isAuthenticated ? '<div class="divider"></div>' : ''}
   <label>Game Mode</label>
   <div class="count-btns">
     <button class="count-btn ${gameMode==='local'?'sel':''}" onclick="setGameMode('local')" style="display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -1205,6 +1196,11 @@ function rSetup(){
     </div>
   `:`<button class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;" onclick="go()">Start Game</button>`}</div></div>`;
   checkPWAInstallable();
+  
+  // Initialize Dynamic widget after DOM is ready
+  if (window.initDynamicWidget) {
+    window.initDynamicWidget();
+  }
   
   // Auto-fill player 1 with authenticated user in online mode
   if(gameMode==='online' && isAuthenticated && sn[0]!==currentUser){
