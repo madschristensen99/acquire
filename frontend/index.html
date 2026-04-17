@@ -1428,7 +1428,7 @@ window.pickC=function(c){if(S.phase!=='found')return;found(c);render();};
 function render(){
   if(!S){rSetup();return;}if(S.phase==='over'){rOver();return;}
   const p=S.pl[S.cp];
-  app.innerHTML=`<header><div class="logo">Acquire</div><div class="header-right"><span class="tiles-remaining">${S.bag.length} tiles remaining</span>${canEnd()&&S.phase==='buy'?'<button class="btn-end" onclick="doEnd()">End Game</button>':''}<button onclick="rules()">Rules</button></div></header>
+  app.innerHTML=`<header><div class="logo" onclick="newGameClick()" style="cursor:pointer;">Acquire</div><div class="header-right"><span class="tiles-remaining">${S.bag.length} tiles remaining</span>${canEnd()&&S.phase==='buy'?'<button class="btn-end" onclick="doEnd()">End Game</button>':''}<button onclick="rules()">Rules</button></div></header>
 <div class="status-bar"><div class="turn">${cpn()}</div><div class="message">${S.msg}</div><div class="phase-tag">${S.phase==='place'?'Place Tile':S.phase==='buy'?'Buy Stock':S.phase}</div></div>
 <div class="game-layout"><div class="main-col"><div class="board-area"><div class="board-frame"><div class="board">${rBoard()}</div></div></div>
 <div class="hand-bar"><div class="hand-tiles"><span class="hand-label">Hand</span>${p.hand.map(t=>{const d=dead(t),s2=sel===t;return`<button class="tile-btn ${s2?'selected':''} ${d?'dead':''}" onclick="${d?'':'selTile('+t+')'}">${tl(t)}</button>`;}).join('')}</div>
