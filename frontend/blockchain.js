@@ -1,18 +1,17 @@
 // Blockchain integration for Acquire game using Fhenix FHE
-import { createCofheConfig, createCofheClient } from '@cofhe/sdk/web';
-import { Encryptable, FheTypes } from '@cofhe/sdk';
-import { Ethers6Adapter } from '@cofhe/sdk/adapters';
+// Note: This requires @cofhe/sdk to be loaded via CDN or bundled
 
-const CONTRACT_ADDRESS = '0x1870bD1f441352ee6a2e38720aC326AE6C9B1989';
-const CHAIN_ID = 84532; // Base Sepolia
+(function() {
+  const CONTRACT_ADDRESS = '0x1870bD1f441352ee6a2e38720aC326AE6C9B1989';
+  const CHAIN_ID = 84532; // Base Sepolia
 
-let cofheClient = null;
-let contract = null;
-let provider = null;
-let signer = null;
+  let cofheClient = null;
+  let contract = null;
+  let provider = null;
+  let signer = null;
 
-// Initialize Cofhe SDK with Dynamic wallet
-export async function initBlockchain() {
+  // Initialize Cofhe SDK with Dynamic wallet
+  async function initBlockchain() {
   if (!window.client) {
     throw new Error('Please sign in with Dynamic first');
   }
@@ -54,8 +53,8 @@ export async function initBlockchain() {
   }
 }
 
-// Join game on-chain
-export async function joinGameOnChain() {
+  // Join game on-chain
+  async function joinGameOnChain() {
   if (!contract) throw new Error('Blockchain not initialized');
   
   try {
@@ -74,8 +73,8 @@ export async function joinGameOnChain() {
   }
 }
 
-// Start game on-chain
-export async function startGameOnChain() {
+  // Start game on-chain
+  async function startGameOnChain() {
   if (!contract) throw new Error('Blockchain not initialized');
   
   try {
@@ -88,8 +87,8 @@ export async function startGameOnChain() {
   }
 }
 
-// Place tile on-chain with FHE encryption
-export async function placeTileOnChain(tileIndex, x, y) {
+  // Place tile on-chain with FHE encryption
+  async function placeTileOnChain(tileIndex, x, y) {
   if (!contract || !cofheClient) throw new Error('Blockchain not initialized');
   
   try {
@@ -116,8 +115,8 @@ export async function placeTileOnChain(tileIndex, x, y) {
   }
 }
 
-// Get current player from contract
-export async function getCurrentPlayer() {
+  // Get current player from contract
+  async function getCurrentPlayer() {
   if (!contract) throw new Error('Blockchain not initialized');
   
   try {
@@ -131,8 +130,8 @@ export async function getCurrentPlayer() {
   }
 }
 
-// Check if it's the user's turn
-export async function isMyTurn() {
+  // Check if it's the user's turn
+  async function isMyTurn() {
   if (!signer) return false;
   
   try {
@@ -145,8 +144,8 @@ export async function isMyTurn() {
   }
 }
 
-// Listen for blockchain events
-export function listenForGameEvents(onTilePlaced, onTurnChanged) {
+  // Listen for blockchain events
+  function listenForGameEvents(onTilePlaced, onTurnChanged) {
   if (!contract) return;
   
   // Listen for TilePlaced events
@@ -170,29 +169,30 @@ export function listenForGameEvents(onTilePlaced, onTurnChanged) {
   }, 5000); // Check every 5 seconds
 }
 
-// Auto-initialize when Dynamic client is ready
-if (window.client) {
-  // Wait for wallet to be ready
-  setTimeout(async () => {
-    try {
-      const walletClient = await window.client.getWalletClient();
-      if (walletClient) {
-        await initBlockchain();
-        console.log('✅ Blockchain auto-initialized with Dynamic wallet');
+  // Auto-initialize when Dynamic client is ready
+  if (window.client) {
+    // Wait for wallet to be ready
+    setTimeout(async () => {
+      try {
+        const walletClient = await window.client.getWalletClient();
+        if (walletClient) {
+          await initBlockchain();
+          console.log('✅ Blockchain auto-initialized with Dynamic wallet');
+        }
+      } catch (error) {
+        console.log('⏳ Blockchain will initialize after sign-in');
       }
-    } catch (error) {
-      console.log('⏳ Blockchain will initialize after sign-in');
-    }
-  }, 1000);
-}
+    }, 1000);
+  }
 
-// Export for global access
-window.blockchainAPI = {
-  init: initBlockchain,
-  joinGame: joinGameOnChain,
-  startGame: startGameOnChain,
-  placeTile: placeTileOnChain,
-  getCurrentPlayer,
-  isMyTurn,
-  listenForEvents: listenForGameEvents,
-};
+  // Export for global access
+  window.blockchainAPI = {
+    init: initBlockchain,
+    joinGame: joinGameOnChain,
+    startGame: startGameOnChain,
+    placeTile: placeTileOnChain,
+    getCurrentPlayer,
+    isMyTurn,
+    listenForEvents: listenForGameEvents,
+  };
+})();
