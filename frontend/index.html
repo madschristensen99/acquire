@@ -1154,6 +1154,14 @@ function rSetup(){
   if(gameMode==='online' && isAuthenticated && sn[0]!==currentUser){
     sn[0]=currentUser;
   }
+  
+  // Load existing games for authenticated users
+  if (isAuthenticated && window.currentUsername) {
+    console.log('🎮 Attempting to load games for:', window.currentUsername);
+    setTimeout(() => loadMyGames(), 1000);
+  } else {
+    console.log('⚠️ Not loading games - isAuthenticated:', isAuthenticated, 'currentUsername:', window.currentUsername);
+  }
 }
 window.setSPC=function(n){spc=n;while(sn.length<n)sn.push('');sn=sn.slice(0,n);rSetup();};
 window.setGameMode=function(mode){
