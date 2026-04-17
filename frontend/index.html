@@ -772,13 +772,13 @@ header {
 }
 .btn-resume {
   padding: 6px 16px; font-size: 12px; font-weight: 600;
-  background: var(--bg-board); color: var(--text); 
-  border: 1px solid var(--border-dark);
+  background: var(--text); color: var(--bg); 
+  border: 1px solid var(--text);
   border-radius: 4px; cursor: pointer; transition: all 0.15s;
 }
 .btn-resume:hover {
-  background: var(--text); color: var(--bg); 
-  border-color: var(--text);
+  background: var(--bg-board); color: var(--text); 
+  border-color: var(--border-dark);
   transform: scale(1.05);
 }
 
@@ -1060,7 +1060,8 @@ function renderGamesIntoSection(gamesSection, games) {
   const waitingGames = [];
   
   games.forEach(game => {
-    const currentPlayerIndex = game.current_player || 0;
+    // If current_player is null or undefined, default to 0 (first player)
+    const currentPlayerIndex = game.current_player !== null && game.current_player !== undefined ? game.current_player : 0;
     const currentPlayerName = game.players[currentPlayerIndex];
     const isYourTurn = currentPlayerName === window.currentUsername;
     
@@ -1075,7 +1076,7 @@ function renderGamesIntoSection(gamesSection, games) {
     const isHost = game.host === window.currentUsername;
     const playerCount = game.players.length;
     const createdDate = new Date(game.created_at).toLocaleDateString();
-    const currentPlayerIndex = game.current_player || 0;
+    const currentPlayerIndex = game.current_player !== null && game.current_player !== undefined ? game.current_player : 0;
     const currentPlayerName = game.players[currentPlayerIndex];
     const isYourTurn = currentPlayerName === window.currentUsername;
     
