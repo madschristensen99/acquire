@@ -60760,6 +60760,9 @@ ${trace.payload.join("\n")}
         window.currentUsername = savedUsername;
         showAuthenticatedUI(authContainer, userInfo);
         updateAuthHeader(userInfo);
+        if (window.loadMyGames) {
+          setTimeout(() => window.loadMyGames(), 100);
+        }
         return;
       }
       const accounts = await __getWalletAccounts_wrapped();
@@ -60768,6 +60771,9 @@ ${trace.payload.join("\n")}
         window.currentUsername = userInfo;
         showAuthenticatedUI(authContainer, userInfo);
         updateAuthHeader(userInfo);
+        if (window.loadMyGames) {
+          setTimeout(() => window.loadMyGames(), 100);
+        }
         return;
       }
       showLoginUI(authContainer);
@@ -60777,6 +60783,9 @@ ${trace.payload.join("\n")}
           window.currentUsername = userInfo2;
           showAuthenticatedUI(authContainer, userInfo2);
           updateAuthHeader(userInfo2);
+          if (window.loadMyGames) {
+            setTimeout(() => window.loadMyGames(), 100);
+          }
         }
       }, client);
     } catch (error) {

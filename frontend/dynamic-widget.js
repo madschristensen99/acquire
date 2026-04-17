@@ -76,6 +76,10 @@ async function initDynamicWidget() {
       window.currentUsername = savedUsername;
       showAuthenticatedUI(authContainer, userInfo);
       updateAuthHeader(userInfo);
+      // Load games after authentication
+      if (window.loadMyGames) {
+        setTimeout(() => window.loadMyGames(), 100);
+      }
       return;
     }
     
@@ -86,6 +90,10 @@ async function initDynamicWidget() {
       window.currentUsername = userInfo;
       showAuthenticatedUI(authContainer, userInfo);
       updateAuthHeader(userInfo);
+      // Load games after authentication
+      if (window.loadMyGames) {
+        setTimeout(() => window.loadMyGames(), 100);
+      }
       return;
     }
     
@@ -99,6 +107,10 @@ async function initDynamicWidget() {
         window.currentUsername = userInfo;
         showAuthenticatedUI(authContainer, userInfo);
         updateAuthHeader(userInfo);
+        // Load games after sign-in
+        if (window.loadMyGames) {
+          setTimeout(() => window.loadMyGames(), 100);
+        }
       }
     }, client);
     

@@ -1028,7 +1028,7 @@ function generateGameCode(){
   return code;
 }
 
-async function loadMyGames() {
+window.loadMyGames = async function() {
   if (!window.currentUsername) {
     console.log('⚠️ No currentUsername set, cannot load games');
     return;
