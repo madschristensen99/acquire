@@ -3,7 +3,7 @@ let contract = null;
 let provider = null;
 let signer = null;
 
-const CONTRACT_ADDRESS = '0xB0a2A4c426f89Bc0420cBb932dd5B72D2A2F3AC3';
+const CONTRACT_ADDRESS = '0x1870bD1f441352ee6a2e38720aC326AE6C9B1989';
 let CONTRACT_ABI = [];
 
 // Load ABI
