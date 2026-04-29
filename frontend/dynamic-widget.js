@@ -27,13 +27,11 @@ addEvmExtension();
 
 let otpVerification = null;
 
-// Wait for DOM to be ready
-document.addEventListener('DOMContentLoaded', async function() {
-  // Check for OAuth redirect first
+// Initialize immediately since script is loaded at end of body
+(async function() {
   await checkOAuthRedirect();
-  
   setTimeout(initDynamicWidget, 500);
-});
+})();
 
 async function checkOAuthRedirect() {
   const currentUrl = new URL(window.location.href);
@@ -59,18 +57,29 @@ async function createWalletAfterAuth() {
 }
 
 async function initDynamicWidget() {
+  console.log('🚀 initDynamicWidget STARTED');
+  
+  // Set window.client immediately so it's always available
+  window.client = client;
+  console.log('✅ window.client set:', !!window.client);
+  
   const authContainer = document.getElementById('dynamic-auth');
   if (!authContainer) {
-    console.error('Auth container not found');
+    console.error('❌ Auth container not found - EXITING');
     return;
   }
+  console.log('✅ Auth container found, continuing...');
 
   try {
+    console.log('📍 Step 1: About to check localStorage...');
     // Check if already authenticated (check localStorage first, then wallet accounts)
     const savedUsername = localStorage.getItem('dynamic_username');
+    console.log('📍 Step 2: Got savedUsername:', savedUsername);
     let userInfo = null;
+    console.log('📍 Step 3: Initialized userInfo');
     
     if (savedUsername) {
+      console.log('📍 Step 4: Has savedUsername, restoring auth...');
       // User authenticated with phone/SMS and set username
       userInfo = savedUsername;
       window.currentUsername = savedUsername;
@@ -80,25 +89,40 @@ async function initDynamicWidget() {
       if (window.loadMyGames) {
         setTimeout(() => window.loadMyGames(), 100);
       }
+      console.log('📍 Step 5: Auth restored, exiting early');
       return;
     }
     
-    const accounts = await getWalletAccounts();
+    console.log('📍 Step 6: No savedUsername, checking wallet accounts...');
+    // Add timeout to prevent hanging
+    const accounts = await Promise.race([
+      getWalletAccounts(),
+      new Promise((resolve) => setTimeout(() => resolve([]), 2000))
+    ]);
+    console.log('📍 Step 7: Got accounts:', accounts);
     if (accounts && accounts.length > 0) {
+      console.log('📍 Step 8: Has accounts, getting user info...');
       // User authenticated with email/Google
       userInfo = getUserInfo();
+      console.log('📍 Step 9: Got userInfo:', userInfo);
       window.currentUsername = userInfo;
+      console.log('📍 Step 10: Showing authenticated UI...');
       showAuthenticatedUI(authContainer, userInfo);
+      console.log('📍 Step 11: Updating auth header...');
       updateAuthHeader(userInfo);
+      console.log('📍 Step 12: Loading games...');
       // Load games after authentication
       if (window.loadMyGames) {
         setTimeout(() => window.loadMyGames(), 100);
       }
+      console.log('📍 Step 13: Exiting after account auth');
       return;
     }
     
+    console.log('📍 Step 14: No accounts, showing login UI...');
     // Show login UI
     showLoginUI(authContainer);
+    console.log('📍 Step 15: Login UI shown');
     
     // Listen for wallet changes
     onEvent({ event: 'walletAccountsChanged' }, (accounts) => {
@@ -117,6 +141,10 @@ async function initDynamicWidget() {
   } catch (error) {
     console.error('Error initializing Dynamic widget:', error);
   }
+  
+  // Set window.client for global access
+  window.client = client;
+  console.log('✅ Dynamic SDK initialized, window.client set:', !!window.client);
 }
 
 function getUserInfo() {

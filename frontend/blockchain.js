@@ -10,11 +10,93 @@
   let provider = null;
   let signer = null;
 
+  // Check if user has enough gas
+  async function checkGas() {
+    try {
+      if (!signer) await initBlockchain();
+      
+      const address = await signer.getAddress();
+      const balance = await provider.getBalance(address);
+      const minBalance = ethers.parseEther('0.001'); // Need at least 0.001 ETH
+      
+      if (balance < minBalance) {
+        console.warn('⚠️ Low gas balance:', ethers.formatEther(balance), 'ETH');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error checking gas:', error);
+      return false;
+    }
+  }
+  
+  // Request gas from faucet
+  async function requestGas() {
+    try {
+      if (!signer) await initBlockchain();
+      
+      const address = await signer.getAddress();
+      console.log('💧 Requesting gas from faucet for:', address);
+      
+      // Try Base Sepolia faucet
+      const faucetUrl = `https://www.coinbase.com/faucets/base-sepolia-faucet`;
+      window.open(faucetUrl, '_blank');
+      
+      showModal('Faucet', `Please visit the Base Sepolia faucet to get test ETH:\n\nYour address: ${address}\n\nAfter receiving funds, refresh and try again.`);
+      
+      return true;
+    } catch (error) {
+      console.error('Error requesting gas:', error);
+      return false;
+    }
+  }
+  
+  // Start a new game on-chain
+  async function startGame(numPlayers) {
+    try {
+      if (!contract) await initBlockchain();
+      
+      console.log(`⛓️ Starting game on-chain with ${numPlayers} players`);
+      
+      const tx = await contract.startGame(numPlayers);
+      console.log('📝 Transaction sent:', tx.hash);
+      
+      const receipt = await tx.wait();
+      console.log('✅ Game started on-chain:', receipt);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to start game on-chain:', error);
+      
+      // Check if it's a gas issue
+      if (error.message.includes('insufficient funds')) {
+        showModal('Need Gas', 'You need test ETH to play on-chain. Click OK to visit the faucet.', [
+          { label: 'Get Gas', primary: true, onClick: () => requestGas() },
+          { label: 'Play Off-Chain', primary: false }
+        ]);
+      }
+      
+      throw error;
+    }
+  }
+
   // Initialize Cofhe SDK with Dynamic wallet
   async function initBlockchain() {
+  // Wait for Dynamic client to be ready (up to 10 seconds)
+  let retries = 0;
+  console.log('⏳ Waiting for Dynamic client...');
+  while (!window.client && retries < 20) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    retries++;
+  }
+  
   if (!window.client) {
+    console.error('❌ Dynamic client not available after 10 seconds');
     throw new Error('Please sign in with Dynamic first');
   }
+  
+  console.log('✅ Dynamic client ready');
 
   try {
     // Get Dynamic's embedded wallet provider
@@ -188,8 +270,10 @@
   // Export for global access
   window.blockchainAPI = {
     init: initBlockchain,
+    checkGas: checkGas,
+    requestGas: requestGas,
+    startGame: startGame,
     joinGame: joinGameOnChain,
-    startGame: startGameOnChain,
     placeTile: placeTileOnChain,
     getCurrentPlayer,
     isMyTurn,

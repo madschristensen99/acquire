@@ -13,9 +13,11 @@ use tracing::{info, error};
 
 mod game_db;
 mod player_notifications;
+mod faucet;
 
 use game_db::{GameDatabase, Game};
 use player_notifications::{subscribe_player, notify_game_players};
+use faucet::{check_balance, fund_wallet};
 
 type Subscriptions = Arc<RwLock<HashMap<String, PushSubscription>>>;
 type GameDb = Arc<GameDatabase>;
@@ -64,6 +66,7 @@ struct CreateGameRequest {
     code: String,
     host: String,
     players: Vec<String>,
+    max_players: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -92,6 +95,11 @@ struct SubscribePlayerRequest {
 struct NotifyTurnRequest {
     game_code: String,
     current_player_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct FaucetRequest {
+    address: String,
 }
 
 #[tokio::main]
@@ -124,15 +132,20 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/", get(health_check))
+        .route("/api/vapid-public-key", get(get_vapid_public_key))
         .route("/api/subscribe", post(subscribe))
         .route("/api/unsubscribe", post(unsubscribe))
         .route("/api/notify-turn", post(notify_turn))
         .route("/api/games", post(create_game))
         .route("/api/games/:code", get(get_game))
+        .route("/api/games/:code/join", post(join_game))
         .route("/api/games/:code/state", put(update_game_state))
+        .route("/api/players", get(get_all_players))
         .route("/api/players/:player_name/games", get(get_player_games))
         .route("/api/players/subscribe", post(subscribe_player))
         .route("/api/players/notify-game", post(notify_game_players))
+        .route("/api/faucet/check", post(check_balance))
+        .route("/api/faucet/fund", post(fund_wallet))
         .layer(cors)
         .with_state((subscriptions.clone(), game_db.clone()));
 
@@ -176,6 +189,23 @@ async fn health_check() -> impl IntoResponse {
         "status": "ok",
         "service": "acquire-notification-server"
     }))
+}
+
+async fn get_vapid_public_key() -> impl IntoResponse {
+    match env::var("VAPID_PUBLIC_KEY") {
+        Ok(public_key) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "publicKey": public_key
+            })),
+        ),
+        Err(_) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "VAPID keys not configured"
+            })),
+        ),
+    }
 }
 
 async fn subscribe(
@@ -340,9 +370,17 @@ async fn create_game(
         }
     }
     
-    match game_db.create_game(req.code, req.host, req.players).await {
-        Ok(game) => {
-            info!("✅ Created game: {}", game.code);
+    match game_db.create_game(req.code.clone(), req.host.clone(), req.max_players).await {
+        Ok(mut game) => {
+            // Add initial players
+            for player in req.players {
+                if let Err(e) = game_db.add_player_to_game(&req.code, &player).await {
+                    error!("❌ Failed to add player {}: {}", player, e);
+                }
+                game.players.push(player);
+            }
+            
+            info!("✅ Game created: {}", game.code);
             (
                 StatusCode::CREATED,
                 Json(serde_json::json!({
@@ -361,6 +399,34 @@ async fn create_game(
                 })),
             )
         }
+    }
+}
+
+#[derive(Deserialize)]
+struct JoinGameRequest {
+    player_name: String,
+}
+
+async fn join_game(
+    State((_, game_db)): State<(Subscriptions, GameDb)>,
+    Path(code): Path<String>,
+    Json(req): Json<JoinGameRequest>,
+) -> impl IntoResponse {
+    match game_db.add_player_to_game(&code, &req.player_name).await {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "message": "Player added to game"
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
     }
 }
 
@@ -428,6 +494,30 @@ async fn update_game_state(
                     success: false,
                     message: format!("Failed to update game state: {}", e),
                 }),
+            )
+        }
+    }
+}
+
+async fn get_all_players(
+    State((_, game_db)): State<(Subscriptions, GameDb)>,
+) -> impl IntoResponse {
+    match game_db.get_all_players().await {
+        Ok(players) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "players": players
+            })),
+        ),
+        Err(e) => {
+            error!("❌ Failed to get players: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": e.to_string()
+                })),
             )
         }
     }

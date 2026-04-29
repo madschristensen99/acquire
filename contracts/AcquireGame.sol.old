@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "@fhenixprotocol/contracts/FHE.sol";
-import "@fhenixprotocol/contracts/access/Permissioned.sol";
+import {FHE, euint8, euint32, ebool, InEuint8, InEuint32} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
-contract AcquireGame is Permissioned {
+contract AcquireGame {
     uint8 constant BOARD_WIDTH = 12;
     uint8 constant BOARD_HEIGHT = 9;
     uint8 constant MAX_PLAYERS = 6;
@@ -101,9 +100,8 @@ contract AcquireGame is Permissioned {
         }
     }
     
-    function placeTile(inEuint8 calldata encryptedTileIndex, uint8 x, uint8 y, Permission calldata permission) 
+    function placeTile(InEuint8 calldata encryptedTileIndex, uint8 x, uint8 y) 
         external 
-        onlySender(permission) 
     {
         require(gameState.gameStarted && !gameState.gameEnded, "Game not active");
         require(x < BOARD_WIDTH && y < BOARD_HEIGHT, "Invalid coordinates");
@@ -159,9 +157,8 @@ contract AcquireGame is Permissioned {
         }
     }
     
-    function purchaseShares(inEuint8 calldata encryptedChainId, inEuint32 calldata encryptedAmount, Permission calldata permission) 
+    function purchaseShares(InEuint8 calldata encryptedChainId, InEuint32 calldata encryptedAmount) 
         external 
-        onlySender(permission) 
     {
         require(gameState.gameStarted && !gameState.gameEnded, "Game not active");
         
@@ -192,25 +189,23 @@ contract AcquireGame is Permissioned {
         return players[playerId].cash;
     }
     
-    function getPlayerShares(uint256 playerId, uint8 chainId, Permission calldata permission) 
+    function getPlayerShares(uint256 playerId, uint8 chainId) 
         external 
         view 
-        onlySender(permission) 
-        returns (string memory) 
+        returns (euint8) 
     {
         require(players[playerId].playerAddress == msg.sender, "Not your data");
-        return FHE.sealoutput(players[playerId].shares[chainId], permission.publicKey);
+        return players[playerId].shares[chainId];
     }
     
-    function getPlayerTile(uint256 playerId, uint8 tileIndex, Permission calldata permission) 
+    function getPlayerTile(uint256 playerId, uint8 tileIndex) 
         external 
         view 
-        onlySender(permission) 
-        returns (string memory) 
+        returns (euint8) 
     {
         require(players[playerId].playerAddress == msg.sender, "Not your data");
         require(tileIndex < TILES_PER_PLAYER, "Invalid tile index");
-        return FHE.sealoutput(players[playerId].tiles[tileIndex], permission.publicKey);
+        return players[playerId].tiles[tileIndex];
     }
     
     function _getPlayerIdByAddress(address playerAddr) private view returns (uint256) {

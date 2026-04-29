@@ -1,19 +1,22 @@
-use mongodb::{Client, Collection, bson::doc};
+use mongodb::{Client, Collection, bson::doc, bson::oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use mongodb::bson::DateTime as BsonDateTime;
 use anyhow::Result;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Game {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
-    pub id: Option<mongodb::bson::oid::ObjectId>,
+    pub id: Option<ObjectId>,
     pub code: String,
     pub host: String,
     pub players: Vec<String>,
+    pub max_players: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub state: Option<String>, // JSON serialized game state
     pub current_player: Option<usize>,
-    pub last_updated: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_updated: Option<BsonDateTime>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,16 +49,20 @@ impl GameDatabase {
         })
     }
     
-    pub async fn create_game(&self, code: String, host: String, players: Vec<String>) -> Result<Game> {
+    pub async fn create_game(&self, code: String, host: String, max_players: Option<i32>) -> Result<Game> {
+        let now = chrono::Utc::now();
+        let bson_now = BsonDateTime::now();
+        
         let game = Game {
             id: None,
             code: code.clone(),
             host,
-            players,
-            created_at: Utc::now(),
+            players: vec![],
+            max_players,
             state: None,
-            current_player: Some(0),
-            last_updated: Some(Utc::now()),
+            current_player: None,
+            created_at: now,
+            last_updated: Some(bson_now),
         };
         
         self.games_collection.insert_one(&game, None).await?;
@@ -64,21 +71,55 @@ impl GameDatabase {
     
     pub async fn get_game(&self, code: &str) -> Result<Option<Game>> {
         let filter = doc! { "code": code };
-        Ok(self.games_collection.find_one(filter, None).await?)
+        match self.games_collection.find_one(filter, None).await {
+            Ok(game) => Ok(game),
+            Err(e) => {
+                // Log the error but don't crash - might be malformed data
+                tracing::error!("❌ Failed to get game: {}", e);
+                Ok(None)
+            }
+        }
     }
     
+    pub async fn add_player_to_game(&self, code: &str, player_name: &str) -> Result<()> {
+        let filter = doc! { "code": code };
+        let update = doc! {
+            "$addToSet": { "players": player_name }
+        };
+        
+        self.games_collection.update_one(filter, update, None).await?;
+        Ok(())
+    }
+
     pub async fn update_game_state(&self, code: &str, state: String, current_player: usize) -> Result<()> {
         let filter = doc! { "code": code };
-        let now = mongodb::bson::DateTime::now();
-        let update = doc! { 
-            "$set": { 
+        let update = doc! {
+            "$set": {
                 "state": state,
-                "current_player": current_player as i32,
-                "last_updated": now,
-            } 
+                "current_player": current_player as i64,
+                "last_updated": BsonDateTime::now()
+            }
         };
         self.games_collection.update_one(filter, update, None).await?;
         Ok(())
+    }
+    
+    pub async fn get_all_players(&self) -> Result<Vec<String>> {
+        use futures::stream::StreamExt;
+        
+        let mut cursor = self.games_collection.find(None, None).await?;
+        let mut players = std::collections::HashSet::new();
+        
+        while let Some(result) = cursor.next().await {
+            if let Ok(game) = result {
+                for player in game.players {
+                    players.insert(player);
+                }
+                players.insert(game.host);
+            }
+        }
+        
+        Ok(players.into_iter().collect())
     }
     
     pub async fn get_player_games(&self, player_name: &str) -> Result<Vec<Game>> {
@@ -88,12 +129,16 @@ impl GameDatabase {
                 { "players": player_name }
             ]
         };
+        
         let mut cursor = self.games_collection.find(filter, None).await?;
         let mut games = Vec::new();
         
         use futures::stream::StreamExt;
         while let Some(result) = cursor.next().await {
-            games.push(result?);
+            // Skip games that fail to deserialize
+            if let Ok(game) = result {
+                games.push(game);
+            }
         }
         
         Ok(games)

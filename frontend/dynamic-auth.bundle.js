@@ -60723,10 +60723,10 @@ ${trace.payload.join("\n")}
   });
   addEvmExtension();
   var otpVerification = null;
-  document.addEventListener("DOMContentLoaded", async function() {
+  (async function() {
     await checkOAuthRedirect();
     setTimeout(initDynamicWidget, 500);
-  });
+  })();
   async function checkOAuthRedirect() {
     const currentUrl2 = new URL(window.location.href);
     const isReturning = await __detectOAuthRedirect_wrapped({ url: currentUrl2 });
@@ -60747,15 +60747,23 @@ ${trace.payload.join("\n")}
     }
   }
   async function initDynamicWidget() {
+    console.log("\u{1F680} initDynamicWidget STARTED");
+    window.client = client;
+    console.log("\u2705 window.client set:", !!window.client);
     const authContainer = document.getElementById("dynamic-auth");
     if (!authContainer) {
-      console.error("Auth container not found");
+      console.error("\u274C Auth container not found - EXITING");
       return;
     }
+    console.log("\u2705 Auth container found, continuing...");
     try {
+      console.log("\u{1F4CD} Step 1: About to check localStorage...");
       const savedUsername = localStorage.getItem("dynamic_username");
+      console.log("\u{1F4CD} Step 2: Got savedUsername:", savedUsername);
       let userInfo = null;
+      console.log("\u{1F4CD} Step 3: Initialized userInfo");
       if (savedUsername) {
+        console.log("\u{1F4CD} Step 4: Has savedUsername, restoring auth...");
         userInfo = savedUsername;
         window.currentUsername = savedUsername;
         showAuthenticatedUI(authContainer, userInfo);
@@ -60763,20 +60771,34 @@ ${trace.payload.join("\n")}
         if (window.loadMyGames) {
           setTimeout(() => window.loadMyGames(), 100);
         }
+        console.log("\u{1F4CD} Step 5: Auth restored, exiting early");
         return;
       }
-      const accounts = await __getWalletAccounts_wrapped();
+      console.log("\u{1F4CD} Step 6: No savedUsername, checking wallet accounts...");
+      const accounts = await Promise.race([
+        __getWalletAccounts_wrapped(),
+        new Promise((resolve) => setTimeout(() => resolve([]), 2e3))
+      ]);
+      console.log("\u{1F4CD} Step 7: Got accounts:", accounts);
       if (accounts && accounts.length > 0) {
+        console.log("\u{1F4CD} Step 8: Has accounts, getting user info...");
         userInfo = getUserInfo();
+        console.log("\u{1F4CD} Step 9: Got userInfo:", userInfo);
         window.currentUsername = userInfo;
+        console.log("\u{1F4CD} Step 10: Showing authenticated UI...");
         showAuthenticatedUI(authContainer, userInfo);
+        console.log("\u{1F4CD} Step 11: Updating auth header...");
         updateAuthHeader(userInfo);
+        console.log("\u{1F4CD} Step 12: Loading games...");
         if (window.loadMyGames) {
           setTimeout(() => window.loadMyGames(), 100);
         }
+        console.log("\u{1F4CD} Step 13: Exiting after account auth");
         return;
       }
+      console.log("\u{1F4CD} Step 14: No accounts, showing login UI...");
       showLoginUI(authContainer);
+      console.log("\u{1F4CD} Step 15: Login UI shown");
       __onEvent_wrapped({ event: "walletAccountsChanged" }, (accounts2) => {
         if (accounts2 && accounts2.length > 0) {
           const userInfo2 = getUserInfo();
@@ -60791,6 +60813,8 @@ ${trace.payload.join("\n")}
     } catch (error) {
       console.error("Error initializing Dynamic widget:", error);
     }
+    window.client = client;
+    console.log("\u2705 Dynamic SDK initialized, window.client set:", !!window.client);
   }
   function getUserInfo() {
     const savedUsername = localStorage.getItem("dynamic_username");

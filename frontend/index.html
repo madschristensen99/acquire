@@ -441,6 +441,20 @@ header {
 .modal p strong { color: var(--text); }
 .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
 
+/* Loading spinner */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border);
+  border-top-color: var(--bg-header);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Chain selector grid */
 .chain-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0;
@@ -742,44 +756,58 @@ header {
   background: var(--bg-board); border-color: var(--text);
 }
 
-/* My Games Section */
+/* My Games Section - Classic Board Game Style */
 .games-list {
-  display: flex; flex-direction: column; gap: 8px;
-  max-height: 200px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px;
 }
 .game-item {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 12px; background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: 6px; cursor: pointer; transition: all 0.15s;
+  padding: 10px 12px; 
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  cursor: pointer; 
+  transition: all 0.12s ease;
 }
 .game-item:hover {
-  background: var(--bg-board); border-color: var(--border-dark);
-  transform: translateX(4px);
+  background: var(--bg-board);
+  border-color: var(--border-dark);
 }
 .game-item.your-turn {
-  border-left: 4px solid var(--imperial);
-  background: linear-gradient(90deg, rgba(212, 160, 23, 0.05) 0%, var(--bg-card) 100%);
+  background: #fafaf8;
+  border-color: #2d7a4f;
 }
 .game-item.your-turn:hover {
-  background: linear-gradient(90deg, rgba(212, 160, 23, 0.1) 0%, var(--bg-board) 100%);
+  background: #f5f3ef;
 }
 .game-code {
-  font-family: 'IBM Plex Mono', monospace; font-size: 16px;
-  font-weight: 700; color: var(--text);
+  font-family: 'IBM Plex Mono', monospace; 
+  font-size: 15px;
+  font-weight: 700; 
+  letter-spacing: 1.5px;
+  color: var(--text);
 }
 .game-details {
-  font-size: 11px; color: var(--text-mid); margin-top: 4px;
+  font-size: 11px; 
+  color: var(--text-mid); 
+  margin-top: 3px;
+  font-weight: 400;
 }
 .btn-resume {
-  padding: 6px 16px; font-size: 12px; font-weight: 600;
-  background: #3c3530; color: #f5f0e8; 
-  border: 1px solid #3c3530;
-  border-radius: 4px; cursor: pointer; transition: all 0.15s;
+  padding: 5px 14px; 
+  font-size: 11px; 
+  font-weight: 600;
+  font-family: 'Source Sans 3', sans-serif;
+  letter-spacing: 0.3px;
+  background: var(--bg-board);
+  border: 1px solid var(--border-dark);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.12s;
 }
 .btn-resume:hover {
-  background: #e8dfd0; color: #3c3530; 
-  border-color: #b8a994;
-  transform: scale(1.05);
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
 }
 
 /* Scrollbar */
@@ -989,11 +1017,54 @@ function buyS(pur){
   if(cnt>3||tot>p.cash)return;
   for(const[c,n]of Object.entries(pur)){if(n<=0)continue;const pr=sp(c,cs(c));p.cash-=pr*n;p.stocks[c]+=n;S.sb[c]-=n;log(`${cpn()} bought ${n} ${CL[c]} at $${pr}.`);}
   endTurn();}
+async function saveGameState() {
+  if (!S || !S.gameCode || !S.isOnline) {
+    console.log('⚠️ Not saving - no online game active');
+    return;
+  }
+  
+  try {
+    const gameState = JSON.stringify(S);
+    const currentPlayerIndex = S.cp;
+    
+    console.log(`💾 Saving game state for ${S.gameCode}, player ${currentPlayerIndex}`);
+    
+    const response = await fetch(`${API_URL}/api/games/${S.gameCode}/state`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        state: gameState,
+        current_player: currentPlayerIndex
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Failed to save game state (${response.status}):`, errorText);
+      
+      // If game doesn't exist (404), it might have been deleted
+      if (response.status === 404) {
+        showModal('Game Not Found', 'This game no longer exists. Please create a new game.');
+      }
+      return;
+    }
+    
+    console.log('✅ Game state saved successfully');
+  } catch (error) {
+    console.error('❌ Error saving game state:', error);
+  }
+}
+
 function endTurn(){
   const p=S.pl[S.cp];while(p.hand.length<6&&S.bag.length>0)p.hand.push(S.bag.pop());p.hand.sort((a,b)=>a-b);
   let rp=true;while(rp){rp=false;for(let i=p.hand.length-1;i>=0;i--)if(dead(p.hand[i])){p.hand.splice(i,1);if(S.bag.length>0){p.hand.push(S.bag.pop());rp=true;}}p.hand.sort((a,b)=>a-b);}
   S.cp=(S.cp+1)%S.pl.length;S.phase='place';S.msg='Place a tile.';
   const cp2=S.pl[S.cp];if(cp2.hand.length>0&&!cp2.hand.some(t=>!dead(t))){log(`${cpn()} has no playable tiles.`);endTurn();}
+  
+  // Save game state after turn ends
+  if (S.isOnline) {
+    saveGameState();
+  }
 }
 function endGame(){
   log('=== GAME ENDING ===');
@@ -1024,9 +1095,13 @@ const app=document.getElementById('app');
 let spc=3,sn=['','',''],sel=null,ba={},ms=0,mt=0,gameMode='local',gameCode=null,isHost=false;
 
 // API URL - use environment variable or default to localhost for development
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const API_URL = (window.location.hostname === 'localhost' || 
+                 window.location.hostname === '127.0.0.1' ||
+                 window.location.hostname.includes('localhost'))
   ? 'http://localhost:3001'
   : 'https://your-vps-domain.com'; // TODO: Replace with your VPS domain
+
+console.log('🌐 API_URL:', API_URL, '(hostname:', window.location.hostname, ')');
 
 function generateGameCode(){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1060,7 +1135,16 @@ function renderGamesIntoSection(gamesSection, games) {
   const waitingGames = [];
   
   games.forEach(game => {
-    // If current_player is null or undefined, default to 0 (first player)
+    // Only show in "Your Turn" if game has actually started (has state)
+    const hasStarted = game.state && game.state !== '';
+    
+    if (!hasStarted) {
+      // Game in lobby - always show in waiting
+      waitingGames.push(game);
+      return;
+    }
+    
+    // Game has started - check whose turn it is
     const currentPlayerIndex = game.current_player !== null && game.current_player !== undefined ? game.current_player : 0;
     const currentPlayerName = game.players[currentPlayerIndex];
     const isYourTurn = currentPlayerName === window.currentUsername;
@@ -1074,11 +1158,12 @@ function renderGamesIntoSection(gamesSection, games) {
   
   const renderGameList = (gamesList) => gamesList.map(game => {
     const isHost = game.host === window.currentUsername;
-    const playerCount = game.players.length;
-    const createdDate = new Date(game.created_at).toLocaleDateString();
+    const hasStarted = game.state && game.state !== '';
     const currentPlayerIndex = game.current_player !== null && game.current_player !== undefined ? game.current_player : 0;
     const currentPlayerName = game.players[currentPlayerIndex];
-    const isYourTurn = currentPlayerName === window.currentUsername;
+    const isYourTurn = hasStarted && currentPlayerName === window.currentUsername;
+    const playerCount = game.players.length;
+    const createdDate = new Date(game.created_at).toLocaleDateString();
     
     return `
       <div class="game-item ${isYourTurn ? 'your-turn' : ''}" onclick="resumeGame('${game.code}')">
@@ -1086,15 +1171,17 @@ function renderGamesIntoSection(gamesSection, games) {
           <div class="game-code">${game.code}</div>
           <div class="game-details">
             ${isHost ? '👑 Host' : '🎮 Player'} • ${playerCount} players • ${createdDate}
-            ${!isYourTurn ? `<br>Waiting for ${currentPlayerName}` : '<br><strong style="color:var(--imperial);">Your turn!</strong>'}
+            ${!hasStarted ? '<br><span style="color:#f59e0b;">⏳ In Lobby</span>' : 
+              (!isYourTurn ? `<br>Waiting for ${currentPlayerName}` : '<br><strong style="color:#10b981;">Your turn!</strong>')}
           </div>
         </div>
-        <button class="btn-resume">Resume</button>
+        <button class="btn-resume">${hasStarted ? 'Resume' : 'Join Lobby'}</button>
       </div>
     `;
   }).join('');
   
   let html = '<h3 style="margin-bottom:12px;">My Games</h3>';
+  
   
   if (yourTurnGames.length > 0) {
     html += `
@@ -1118,6 +1205,35 @@ function renderGamesIntoSection(gamesSection, games) {
 }
 
 window.loadMyGames = async function() {
+  // Try to get username from multiple sources
+  if (!window.currentUsername) {
+    // Try localStorage first
+    const savedUsername = localStorage.getItem('dynamic_username');
+    if (savedUsername) {
+      window.currentUsername = savedUsername;
+      window.isAuthenticated = true;
+    } else {
+      // Try to get from Dynamic client
+      try {
+        const { getWalletAccounts } = await import('./dynamic-auth.bundle.js');
+        const accounts = await getWalletAccounts();
+        if (accounts && accounts.length > 0) {
+          // Get user info from client
+          const user = window.dynamicClient?.user;
+          if (user?.email) {
+            window.currentUsername = user.email;
+            window.isAuthenticated = true;
+          } else if (user?.username) {
+            window.currentUsername = user.username;
+            window.isAuthenticated = true;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to get username:', e);
+      }
+    }
+  }
+  
   if (!window.currentUsername) {
     console.log('⚠️ No currentUsername set, cannot load games');
     return;
@@ -1240,8 +1356,16 @@ function rSetup(){
     console.log('⚠️ Not loading games - isAuthenticated:', isAuthenticated, 'currentUsername:', window.currentUsername);
   }
 }
-window.setSPC=function(n){spc=n;while(sn.length<n)sn.push('');sn=sn.slice(0,n);rSetup();};
+window.setSPC=function(n){
+  if (spc === n) return; // No change
+  spc=n;
+  while(sn.length<n)sn.push('');
+  sn=sn.slice(0,n);
+  rSetup();
+};
 window.setGameMode=function(mode){
+  if (gameMode === mode) return; // No change, avoid flash
+  
   // Check localStorage for saved username or Dynamic client user
   const savedUsername = localStorage.getItem('dynamic_username');
   const dynamicUser = window.client && window.client.user ? getUserInfoFromClient() : null;
@@ -1251,8 +1375,9 @@ window.setGameMode=function(mode){
     showModal('Sign In Required', 'Please sign in to play online multiplayer');
     return;
   }
+  
   gameMode=mode;
-  if(mode==='online' && currentUser){
+  if(gameMode==='online' && currentUser){
     window.currentUsername = currentUser;
     sn[0]=currentUser;
   }
@@ -1285,9 +1410,23 @@ window.go=function(){const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);S=newG
 window.createOnlineGame=async function(){
   gameCode=generateGameCode();
   isHost=true;
-  const names=sn.map((n,i)=>n.trim()||`Player ${i+1}`);
   
-  // Store game in MongoDB via Rust API
+  // Show loading modal
+  const loadingModal = document.createElement('div');
+  loadingModal.className = 'modal-overlay';
+  loadingModal.innerHTML = `
+    <div class="modal" style="text-align:center;">
+      <div style="font-size:48px;margin-bottom:16px;">🎮</div>
+      <h2>Creating Game...</h2>
+      <p style="color:var(--text-mid);margin:16px 0;">Setting up your game room</p>
+      <div class="loading-spinner"></div>
+    </div>
+  `;
+  document.body.appendChild(loadingModal);
+  
+  // Get the selected number of players (from spc variable)
+  const maxPlayers = spc || 2; // Default to 2 if not set
+  
   try {
     const response = await fetch(`${API_URL}/api/games`, {
       method: 'POST',
@@ -1295,11 +1434,13 @@ window.createOnlineGame=async function(){
       body: JSON.stringify({
         code: gameCode,
         host: window.currentUsername,
-        players: names
+        players: [window.currentUsername],
+        max_players: maxPlayers
       })
     });
     
     if (!response.ok) {
+      loadingModal.remove();
       const errorData = await response.json();
       showModal('Error', errorData.message || 'Failed to create game');
       return;
@@ -1313,16 +1454,15 @@ window.createOnlineGame=async function(){
         const playerId = await window.blockchainAPI.joinGame();
         console.log(`✅ Joined on-chain game as player ${playerId}`);
       } catch (error) {
-        console.warn('Blockchain not available, playing off-chain:', error);
+        console.log('Blockchain not available, playing off-chain:', error);
       }
     }
     
-    S=newGame(names);
-    initC(S);
-    S.gameCode=gameCode;
-    S.isOnline=true;
-    S.msg=`${cpn()}, place a tile.`;
-    sel=null;
+    // Remove loading modal
+    loadingModal.remove();
+    
+    // DON'T start the game yet - show lobby instead
+    showLobby(gameCode);
     
     // Request notification permission for online games
     if (window.requestNotificationPermission) {
@@ -1335,8 +1475,6 @@ window.createOnlineGame=async function(){
         }
       );
     }
-    
-    showGameCodeModal();
   } catch (error) {
     console.error('Error creating game:', error);
     showModal('Error', 'Failed to create game. Please try again.');
@@ -1344,7 +1482,78 @@ window.createOnlineGame=async function(){
 };
 
 window.showJoinGame=async function(gameCode){
-  const code = gameCode || prompt('Enter game code:');
+  // If code is provided (from resume), use it directly
+  if (gameCode) {
+    await joinGameWithCode(gameCode);
+    return;
+  }
+  
+  // Otherwise show modal to enter code
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>Join Game</h2>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:16px;">
+        Enter the 6-character game code
+      </p>
+      <input 
+        type="text" 
+        id="join-code-input" 
+        placeholder="e.g. ABC123"
+        style="width:100%;padding:12px;font-size:18px;font-family:'IBM Plex Mono',monospace;letter-spacing:3px;text-transform:uppercase;border:2px solid var(--border);border-radius:6px;margin-bottom:16px;text-align:center;"
+        maxlength="6"
+      />
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="this.closest('.modal-overlay').remove()" style="flex:1;">
+          Cancel
+        </button>
+        <button class="btn btn-primary" onclick="window.submitJoinCode()" style="flex:1;">
+          Join Game
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Focus input
+  setTimeout(() => {
+    const input = document.getElementById('join-code-input');
+    input.focus();
+    
+    // Auto-uppercase as user types
+    input.addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+    
+    // Allow Enter key to submit
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        window.submitJoinCode();
+      }
+    });
+  }, 100);
+};
+
+window.submitJoinCode = async function() {
+  const input = document.getElementById('join-code-input');
+  const code = input.value.trim();
+  
+  if (!code || code.length !== 6) {
+    alert('Please enter a valid 6-character game code');
+    return;
+  }
+  
+  // Remove modal
+  const modal = document.querySelector('.modal-overlay');
+  if (modal) modal.remove();
+  
+  // Join the game
+  await joinGameWithCode(code);
+};
+
+async function joinGameWithCode(code) {
   if(!code)return;
   
   try {
@@ -1362,7 +1571,61 @@ window.showJoinGame=async function(gameCode){
     }
     
     const game = data.game;
+    
+    // Clear any existing lobby polling first
+    if (window.lobbyPollInterval) {
+      clearInterval(window.lobbyPollInterval);
+      window.lobbyPollInterval = null;
+    }
+    
+    // Set gameCode for this session
     gameCode = code.toUpperCase();
+    console.log('🎮 Set gameCode to:', gameCode);
+    
+    // Check if game has started or is still in lobby
+    const hasGameState = game.state && game.state !== 'null';
+    const playerCount = game.players.length;
+    
+    // If game hasn't started yet (no state), show lobby
+    if (!hasGameState) {
+      // Host viewing their own game that hasn't started - show lobby
+      if (game.host === window.currentUsername) {
+        console.log('📋 Showing lobby for gameCode:', gameCode);
+        const codeToUse = gameCode; // Capture in local variable
+        showLobby(codeToUse);
+        return;
+      }
+      
+      // Non-host trying to join - add them to the game
+      if (!game.players.includes(window.currentUsername)) {
+        try {
+          // Add player to game
+          const addResponse = await fetch(`${API_URL}/api/games/${code.toUpperCase()}/join`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              player_name: window.currentUsername
+            })
+          });
+          
+          if (!addResponse.ok) {
+            showModal('Error', 'Failed to join game. Please try again.');
+            return;
+          }
+          
+          console.log('✅ Joined game lobby');
+        } catch (error) {
+          console.error('Error joining game:', error);
+          showModal('Error', 'Failed to join game. Please try again.');
+          return;
+        }
+      }
+      
+      // Show lobby for joined player
+      const codeToUse = gameCode;
+      showLobby(codeToUse);
+      return;
+    }
     
     // Request notification permission for joining players
     if (window.requestNotificationPermission && window.currentUsername) {
@@ -1376,11 +1639,24 @@ window.showJoinGame=async function(gameCode){
       );
     }
     
+    // Game has started or has enough players - load it
     sn=game.players;
     S=newGame(game.players);
     initC(S);
     S.gameCode=gameCode;
     S.isOnline=true;
+    
+    // Load saved state if it exists
+    if (hasGameState) {
+      try {
+        const savedState = JSON.parse(game.state);
+        // Restore game state
+        Object.assign(S, savedState);
+      } catch (e) {
+        console.error('Failed to parse game state:', e);
+      }
+    }
+    
     S.msg=`${cpn()}, place a tile.`;
     sel=null;
     render();
@@ -1390,37 +1666,367 @@ window.showJoinGame=async function(gameCode){
   }
 };
 
-function showGameCodeModal(){
+window.showLobby=async function(code){
+  const codeToFetch = code || gameCode;
+  console.log('🏛️ showLobby called with code:', code, 'gameCode:', gameCode, 'using:', codeToFetch);
+  
+  // Fetch current game state
+  let players = [window.currentUsername];
+  try {
+    const response = await fetch(`${API_URL}/api/games/${codeToFetch}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.game) {
+        players = data.game.players;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching game:', error);
+  }
+  
+  const playerCount = players.length;
+  const spotsLeft = 6 - playerCount;
+  const canStart = playerCount >= 2;
+  
+  app.innerHTML=`
+    <div class="setup">
+      <div class="setup-box" style="max-width:500px;">
+        <h1>Game Lobby</h1>
+        <p class="sub">Waiting for players to join...</p>
+        <div class="divider"></div>
+        
+        <div style="background:var(--bg);border:2px solid var(--border-dark);border-radius:8px;padding:20px;margin:20px 0;text-align:center;">
+          <div style="font-size:13px;color:var(--text-mid);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Game Code</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:700;letter-spacing:6px;color:var(--text);">${codeToFetch}</div>
+          <button class="btn" onclick="copyGameCode('${codeToFetch}')" style="margin-top:12px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy Code
+          </button>
+        </div>
+        
+        <div style="margin:20px 0;">
+          <div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">
+            Players (${playerCount}/6)
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${players.map((p, i) => `
+              <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:12px;display:flex;align-items:center;gap:10px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:var(--imperial);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">
+                  ${i + 1}
+                </div>
+                <div style="flex:1;">
+                  <div style="font-weight:600;font-size:14px;">${p}</div>
+                  ${i === 0 ? '<div style="font-size:11px;color:var(--text-mid);">👑 Host</div>' : ''}
+                </div>
+                ${p === window.currentUsername ? '<div style="font-size:11px;color:var(--imperial);font-weight:600;">YOU</div>' : ''}
+              </div>
+            `).join('')}
+            ${playerCount < 6 ? `
+              <div onclick="showInviteModal('${codeToFetch}')" style="background:var(--bg);border:1px dashed var(--border-dark);border-radius:6px;padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.opacity='1';this.style.borderColor='var(--border)'" onmouseout="this.style.opacity='0.6';this.style.borderColor='var(--border-dark)'" class="invite-slot">
+                <div style="width:32px;height:32px;border-radius:50%;border:2px dashed var(--border-dark);display:flex;align-items:center;justify-content:center;font-size:18px;">
+                  +
+                </div>
+                <div style="font-size:13px;color:var(--text-mid);">Click to invite players...</div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="newGameClick()" style="flex:1;">Cancel</button>
+          <button class="btn btn-primary" onclick="startGameWithCode('${codeToFetch}')" style="flex:2;" ${!canStart ? 'disabled title="Need at least 2 players"' : ''}>
+            ${canStart ? 'Start Game' : 'Waiting for Players...'}
+          </button>
+        </div>
+        
+        <p style="font-size:11px;color:var(--text-light);margin-top:12px;text-align:center;">
+          Share the game code with friends. The lobby will update automatically when they join.
+        </p>
+      </div>
+    </div>
+  `;
+  
+  // Poll for player updates every 2 seconds
+  if (window.lobbyPollInterval) clearInterval(window.lobbyPollInterval);
+  window.lobbyPollInterval = setInterval(() => {
+    if (!codeToFetch) {
+      clearInterval(window.lobbyPollInterval);
+      return;
+    }
+    showLobby(codeToFetch);
+  }, 2000);
+};
+
+window.copyGameCode=function(code){
+  const codeToCopy = code || gameCode;
+  navigator.clipboard.writeText(codeToCopy).then(()=>{
+    showModal('Copied!', 'Game code copied to clipboard!');
+  }).catch(()=>{
+    showModal('Game Code', codeToCopy);
+  });
+};
+
+window.invitePlayerDirectly=async function(playerName, gameCode){
+  try {
+    console.log(`📨 Sending invite to ${playerName} for game ${gameCode}`);
+    
+    // First, make sure the player has subscribed to notifications for this game
+    // The notification system expects game_code and current_player_name
+    const response = await fetch(`${API_URL}/api/players/notify-game`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        game_code: gameCode,
+        current_player_name: window.currentUsername // This will send to everyone EXCEPT this player
+      })
+    });
+    
+    if (response.ok) {
+      showModal('Invite Sent!', `Notification sent to ${playerName}`);
+    } else {
+      // Fallback to copying code
+      navigator.clipboard.writeText(gameCode).then(()=>{
+        showModal('Code Copied', `${playerName} doesn't have notifications enabled. Share this code: ${gameCode}`);
+      });
+    }
+  } catch (error) {
+    console.error('Error sending invite:', error);
+    // Fallback to copying code
+    navigator.clipboard.writeText(gameCode).then(()=>{
+      showModal('Code Copied', `Could not send notification. Share this code with ${playerName}: ${gameCode}`);
+    });
+  }
+};
+
+window.showInviteModal=async function(code){
+  const codeToUse = code || gameCode;
+  const shareUrl = `${window.location.origin}${window.location.pathname}?join=${codeToUse}`;
+  const shareText = `Join my Acquire game! Code: ${codeToUse}`;
+  
   const modal=document.createElement('div');
   modal.className='modal-overlay';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  
+  // Fetch current game to see who's already joined
+  let joinedPlayers = [];
+  let maxPlayers = 6; // Default
+  try {
+    const response = await fetch(`${API_URL}/api/games/${codeToUse}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.game) {
+        joinedPlayers = data.game.players;
+        maxPlayers = data.game.max_players || 6; // Use game's max_players or default to 6
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching game:', error);
+  }
+  
+  // Fetch all registered players
+  let allPlayers = [];
+  try {
+    const response = await fetch(`${API_URL}/api/players`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.players) {
+        allPlayers = data.players;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching players:', error);
+  }
+  
+  // Filter out only the current user (show everyone else, even if already in game)
+  const otherPlayers = allPlayers.filter(p => p !== window.currentUsername);
+  
+  // Show who's available to invite (not already in the game)
+  const availablePlayers = otherPlayers.filter(p => !joinedPlayers.includes(p));
+  
+  const playerCount = joinedPlayers.length;
+  const spotsLeft = maxPlayers - playerCount;
+  
   modal.innerHTML=`
-    <div class="modal">
-      <h2>Game Created!</h2>
-      <p>Share this code with your friends:</p>
-      <div style="background:var(--bg);border:2px solid var(--border-dark);border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:700;letter-spacing:4px;color:var(--text);">${gameCode}</div>
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>Invite Players</h2>
+      
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--text-mid);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">
+          Players in Lobby (${playerCount}/${maxPlayers})
+        </div>
+        ${joinedPlayers.map((p, i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;${i > 0 ? 'border-top:1px solid var(--border-dark);' : ''}">
+            <div style="width:24px;height:24px;border-radius:50%;background:var(--imperial);color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">
+              ${i + 1}
+            </div>
+            <div style="flex:1;font-size:13px;">${p}</div>
+            ${p === window.currentUsername ? '<div style="font-size:10px;color:var(--imperial);font-weight:700;">YOU</div>' : ''}
+            ${i === 0 ? '<div style="font-size:10px;color:var(--text-mid);">👑 Host</div>' : ''}
+          </div>
+        `).join('')}
+        ${spotsLeft > 0 ? `
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-dark);font-size:12px;color:var(--text-mid);">
+            ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} available
+          </div>
+        ` : ''}
       </div>
-      <p style="font-size:12px;color:var(--text-mid);">Players can join by clicking "Join Game" and entering this code.</p>
+      
+      ${spotsLeft > 0 && availablePlayers.length > 0 ? `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;">
+          <div style="font-size:11px;color:var(--text-mid);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">
+            Available Players
+          </div>
+          ${availablePlayers.slice(0, 10).map(p => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid var(--border-dark);">
+              <div style="font-size:13px;">${p}</div>
+              <button class="btn" style="padding:4px 12px;font-size:12px;" onclick="window.invitePlayerDirectly('${p}', '${codeToUse}')">
+                Invite
+              </button>
+            </div>
+          `).join('')}
+          ${availablePlayers.length > 10 ? `<div style="font-size:11px;color:var(--text-mid);margin-top:8px;text-align:center;">+${availablePlayers.length - 10} more players</div>` : ''}
+        </div>
+      ` : ''}
+      
+      ${spotsLeft > 0 && otherPlayers.length === 0 ? `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;text-align:center;">
+          <div style="font-size:13px;color:var(--text-mid);">You are the only registered player</div>
+          <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Share the code below to invite friends</div>
+        </div>
+      ` : ''}
+      
+      ${spotsLeft > 0 && otherPlayers.length > 0 && availablePlayers.length === 0 ? `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;text-align:center;">
+          <div style="font-size:13px;color:var(--text-mid);">All registered players are already in this game</div>
+          <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Share the code to invite more friends</div>
+        </div>
+      ` : ''}
+      
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--text-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Game Code</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:700;letter-spacing:4px;color:var(--text);text-align:center;margin:8px 0;">${codeToUse}</div>
+        <button class="btn" onclick="navigator.clipboard.writeText('${codeToUse}').then(()=>showModal('Copied!','Game code copied!'))" style="width:100%;margin-top:8px;">
+          Copy Code
+        </button>
+      </div>
+      
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--text-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Share Link</div>
+        <div style="font-size:12px;color:var(--text);word-break:break-all;background:var(--bg-card);padding:8px;border-radius:4px;margin:8px 0;">${shareUrl}</div>
+        <button class="btn" onclick="navigator.clipboard.writeText('${shareUrl}').then(()=>showModal('Copied!','Link copied!'))" style="width:100%;margin-top:8px;">
+          Copy Link
+        </button>
+      </div>
+      
+      ${navigator.share ? `
+        <button class="btn btn-primary" onclick="navigator.share({title:'Join my Acquire game',text:'${shareText}',url:'${shareUrl}'}).catch(e=>console.log(e));document.querySelector('.modal-overlay').remove();" style="width:100%;margin-bottom:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Share via...
+        </button>
+      ` : ''}
+      
       <div class="modal-actions">
-        <button class="btn" onclick="copyGameCode()">Copy Code</button>
-        <button class="btn btn-primary" onclick="startGameWithCode()">Start Game</button>
+        <button class="btn" onclick="this.closest('.modal-overlay').remove()">Close</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 };
 
-window.copyGameCode=function(){
-  navigator.clipboard.writeText(gameCode).then(()=>{
-    showModal('Copied!', 'Game code copied to clipboard!');
-  }).catch(()=>{
-    showModal('Game Code', gameCode);
-  });
-};
-
-window.startGameWithCode=function(){
-  document.querySelector('.modal-overlay').remove();
-  render();
+window.startGameWithCode=async function(code){
+  // Show loading modal
+  const loadingModal = document.createElement('div');
+  loadingModal.className = 'modal-overlay';
+  loadingModal.innerHTML = `
+    <div class="modal" style="text-align:center;">
+      <div style="font-size:48px;margin-bottom:16px;">🚀</div>
+      <h2>Starting Game...</h2>
+      <p style="color:var(--text-mid);margin:16px 0;">Initializing game board and blockchain</p>
+      <div class="loading-spinner"></div>
+    </div>
+  `;
+  document.body.appendChild(loadingModal);
+  
+  const codeToUse = code || gameCode;
+  console.log('🎮 Starting game with code:', codeToUse);
+  
+  // Clear lobby polling
+  if (window.lobbyPollInterval) {
+    clearInterval(window.lobbyPollInterval);
+    window.lobbyPollInterval = null;
+  }
+  
+  // Fetch current game state to get all joined players
+  try {
+    const response = await fetch(`${API_URL}/api/games/${codeToUse}`);
+    if (!response.ok) {
+      showModal('Error', 'Failed to load game');
+      return;
+    }
+    
+    const data = await response.json();
+    if (!data.success || !data.game) {
+      showModal('Error', 'Game not found');
+      return;
+    }
+    
+    const players = data.game.players;
+    if (players.length < 2) {
+      showModal('Not Enough Players', 'Wait for at least 2 players to join before starting.');
+      return;
+    }
+    
+    // Now start the game with actual players
+    S=newGame(players);
+    initC(S);
+    S.gameCode=codeToUse;
+    gameCode=codeToUse; // Also set global for other functions
+    S.isOnline=true;
+    S.msg=`${cpn()}, place a tile.`;
+    sel=null;
+    
+    // Initialize blockchain game with all players
+    if (window.blockchainAPI) {
+      try {
+        console.log('⛓️ Initializing blockchain game with players:', players);
+        
+        // Check if user has gas
+        const hasGas = await window.blockchainAPI.checkGas();
+        if (!hasGas) {
+          showModal('Need Gas', 'You need gas to play on-chain. Please fund your wallet or continue playing off-chain.');
+        }
+        
+        // Start the game on-chain (only host should do this)
+        if (window.currentUsername === players[0]) {
+          await window.blockchainAPI.startGame(players.length);
+          console.log('✅ Game started on-chain');
+        }
+      } catch (error) {
+        console.error('❌ Blockchain initialization failed:', error);
+        showModal('Blockchain Error', 'Failed to initialize on-chain game. Playing off-chain only.');
+      }
+    }
+    
+    // Save initial game state
+    await saveGameState();
+    
+    // Remove loading modal
+    loadingModal.remove();
+    
+    render();
+  } catch (error) {
+    console.error('Error starting game:', error);
+    loadingModal.remove();
+    showModal('Error', 'Failed to start game: ' + error.message);
+  }
 };
 window.clickC=async function(idx){
   if(S.phase!=='place')return;
@@ -1431,6 +2037,12 @@ window.clickC=async function(idx){
   // If online game, validate it's the current player's turn
   if(S.isOnline) {
     const currentPlayerName = S.pl[S.cp].name;
+    console.log('🎯 Turn check:', {
+      currentPlayerName,
+      windowCurrentUsername: window.currentUsername,
+      match: currentPlayerName === window.currentUsername,
+      currentPlayerIndex: S.cp
+    });
     if(currentPlayerName !== window.currentUsername) {
       showModal('Not Your Turn', `It's ${currentPlayerName}'s turn.`);
       return;
@@ -1440,9 +2052,12 @@ window.clickC=async function(idx){
     if(window.blockchainAPI) {
       try {
         const isMyTurn = await window.blockchainAPI.isMyTurn();
+        console.log('⛓️ Blockchain turn check:', isMyTurn);
         if(!isMyTurn) {
-          showModal('Not Your Turn', 'Wait for other players to move.');
-          return;
+          console.warn('⚠️ Blockchain says not your turn, but local state says it is. Using local state.');
+          // Don't block - blockchain might be out of sync
+          // showModal('Not Your Turn', 'Wait for other players to move.');
+          // return;
         }
         
         // Calculate x, y from tile index
@@ -1465,8 +2080,49 @@ window.clickC=async function(idx){
 };
 window.pickC=function(c){if(S.phase!=='found')return;found(c);render();};
 
+// Poll for game state updates in online games
+async function syncGameState() {
+  if (!S || !S.isOnline || !S.gameCode) return;
+  
+  try {
+    const response = await fetch(`${API_URL}/api/games/${S.gameCode}`);
+    if (!response.ok) {
+      // Silently ignore errors - game might have malformed data
+      return;
+    }
+    
+    const data = await response.json();
+    if (data.success && data.game && data.game.state) {
+      const serverState = JSON.parse(data.game.state);
+      // Only update if server state is newer (different turn)
+      if (serverState.cp !== S.cp || serverState.phase !== S.phase) {
+        console.log('🔄 Syncing game state from server');
+        Object.assign(S, serverState);
+        render();
+      }
+    }
+  } catch (error) {
+    // Silently ignore sync errors
+    console.debug('Sync skipped:', error.message);
+  }
+}
+
+// Start polling when game starts
+function startGameStatePolling() {
+  if (window.gameStatePollInterval) {
+    clearInterval(window.gameStatePollInterval);
+  }
+  window.gameStatePollInterval = setInterval(syncGameState, 3000); // Poll every 3 seconds
+}
+
 function render(){
   if(!S){rSetup();return;}if(S.phase==='over'){rOver();return;}
+  
+  // Start polling for online games
+  if (S.isOnline && !window.gameStatePollInterval) {
+    startGameStatePolling();
+  }
+  
   const p=S.pl[S.cp];
   app.innerHTML=`<header><div class="logo" onclick="newGameClick()" style="cursor:pointer;">Acquire</div><div class="header-right"><span class="tiles-remaining">${S.bag.length} tiles remaining</span>${canEnd()&&S.phase==='buy'?'<button class="btn-end" onclick="doEnd()">End Game</button>':''}<button onclick="rules()">Rules</button></div></header>
 <div class="status-bar"><div class="turn">${cpn()}</div><div class="message">${S.msg}</div><div class="phase-tag">${S.phase==='place'?'Place Tile':S.phase==='buy'?'Buy Stock':S.phase}</div></div>
@@ -1534,8 +2190,10 @@ function rStocks(){
 }
 
 function rPlr(p,i){
-  const a=i===S.cp,st=CHAINS.filter(c=>p.stocks[c]>0).map(c=>`<span class="plr-chip" style="background:var(--${c}-bg);color:var(--${c});border-color:var(--${c})">${p.stocks[c]} ${CL[c].substring(0,3)}</span>`).join('');
-  return`<div class="plr-card ${a?'active':''}"><div class="plr-top"><span class="plr-name">${a?'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><path d="M5 3l14 9-14 9V3z"/></svg>':''}${p.name}</span><span class="plr-cash">$${p.cash.toLocaleString()}</span></div><div class="plr-stocks">${st||'<span style="font-size:10px;color:var(--text-light)">-</span>'}</div></div>`;
+  const a=i===S.cp;
+  const isYou = p.name === window.currentUsername;
+  const st=CHAINS.filter(c=>p.stocks[c]>0).map(c=>`<span class="plr-chip" style="background:var(--${c}-bg);color:var(--${c});border-color:var(--${c})">${p.stocks[c]} ${CL[c].substring(0,3)}</span>`).join('');
+  return`<div class="plr-card ${a?'active':''}"><div class="plr-top"><span class="plr-name">${a?'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><path d="M5 3l14 9-14 9V3z"/></svg>':''}${p.name}${isYou ? ' <span style="font-size:9px;color:var(--text-mid);font-weight:700;margin-left:4px;">YOU</span>' : ''}</span><span class="plr-cash">$${p.cash.toLocaleString()}</span></div><div class="plr-stocks">${st||'<span style="font-size:10px;color:var(--text-light)">-</span>'}</div></div>`;
 }
 
 function rModal(){
@@ -1641,7 +2299,23 @@ window.quickDisp=function(action){
 };
 window.confDisp=function(){subDisp(ms,mt);ms=0;mt=0;render();};
 window.doEnd=function(){endGame();render();};
-window.newGameClick=function(){S=null;ms=0;mt=0;ba={};sel=null;rSetup();};
+window.newGameClick=function(){
+  console.log('🔄 newGameClick called - clearing gameCode');
+  S=null;
+  ms=0;
+  mt=0;
+  ba={};
+  sel=null;
+  gameCode=null;
+  
+  // Clear lobby polling if active
+  if (window.lobbyPollInterval) {
+    clearInterval(window.lobbyPollInterval);
+    window.lobbyPollInterval = null;
+  }
+  
+  rSetup();
+};
 window.shareGame=function(text){
   if(navigator.share){
     navigator.share({title:'Acquire Game Results',text:text,url:window.location.href}).catch(e=>console.log('Share failed',e));
@@ -1710,11 +2384,22 @@ window.installPWA = async function() {
   checkPWAInstallable();
 };
 
+// Set auth state immediately from localStorage before anything else loads
+(function() {
+  const savedUsername = localStorage.getItem('dynamic_username');
+  if (savedUsername) {
+    window.currentUsername = savedUsername;
+    window.isAuthenticated = true;
+    console.log('✅ Auth restored from localStorage:', savedUsername);
+  }
+})();
+
 rSetup();
 </script>
 <script src="./notifications.js"></script>
 <script src="./blockchain.js"></script>
-<script src="./dynamic-auth.bundle.js"></script>
+<script src="./faucet.js"></script>
+<script src="./dynamic-auth.bundle.js?v=1777503000"></script>
 <script src="./app.js"></script>
 </body>
 </html>

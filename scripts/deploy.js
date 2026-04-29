@@ -12,14 +12,14 @@ async function main() {
   const balance = await hre.ethers.provider.getBalance(deployer.address);
   console.log(`💰 Account balance: ${hre.ethers.formatEther(balance)} ETH`);
 
-  const AcquireGame = await hre.ethers.getContractFactory("AcquireGame");
-  console.log("⏳ Deploying contract...");
+  const AcquireGame = await hre.ethers.getContractFactory("AcquireGameCoFHE");
+  console.log("⏳ Deploying AcquireGameCoFHE contract...");
   
   const acquireGame = await AcquireGame.deploy();
   await acquireGame.waitForDeployment();
 
   const address = await acquireGame.getAddress();
-  console.log(`\n✅ AcquireGame deployed to: ${address}`);
+  console.log(`\n✅ AcquireGameCoFHE deployed to: ${address}`);
   
   // Export contract info for frontend
   const contractInfo = {
@@ -41,7 +41,7 @@ async function main() {
   );
   
   // Export ABI for frontend
-  const artifactPath = path.join(__dirname, "../artifacts/contracts/AcquireGame.sol/AcquireGame.json");
+  const artifactPath = path.join(__dirname, "../artifacts/contracts/AcquireGameCoFHE.sol/AcquireGameCoFHE.json");
   const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
   
   fs.writeFileSync(
@@ -54,12 +54,37 @@ async function main() {
   
   // Network-specific explorer links
   const explorers = {
+    arbitrumSepolia: `https://sepolia.arbiscan.io/address/${address}`,
     baseSepolia: `https://sepolia.basescan.org/address/${address}`,
     fhenix: `https://explorer.helium.fhenix.zone/address/${address}`,
   };
   
   if (explorers[network]) {
     console.log(`\n🔍 View on explorer: ${explorers[network]}`);
+  }
+  
+  // Verify contract on block explorer
+  if (network !== 'localhost' && network !== 'hardhat') {
+    console.log("\n🔍 Verifying contract on block explorer...");
+    console.log("⏳ Waiting 30 seconds for block confirmations...");
+    
+    await new Promise(resolve => setTimeout(resolve, 30000));
+    
+    try {
+      await hre.run("verify:verify", {
+        address: address,
+        constructorArguments: [],
+      });
+      console.log("✅ Contract verified successfully!");
+    } catch (error) {
+      if (error.message.includes("Already Verified")) {
+        console.log("✅ Contract already verified!");
+      } else {
+        console.log("⚠️  Verification failed:", error.message);
+        console.log("💡 You can verify manually later with:");
+        console.log(`   npx hardhat verify --network ${network} ${address}`);
+      }
+    }
   }
   
   console.log("\n✨ Deployment complete!");

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'acquire-v1';
+const CACHE_NAME = 'acquire-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -36,26 +36,37 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Skip caching for chrome-extension and non-http(s) requests
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+  
   event.respondWith(
-    caches.match(event.request)
+    // Always fetch fresh, only use cache as fallback
+    fetch(event.request)
       .then((response) => {
-        if (response) {
+        // Don't cache if not successful
+        if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;
         }
-        return fetch(event.request).then((response) => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+        
+        // Only cache static assets, not API calls
+        if (event.request.url.includes('/api/')) {
           return response;
-        });
+        }
+        
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME)
+          .then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        return response;
       })
       .catch(() => {
-        return caches.match('/index.html');
+        // Fallback to cache only on network error
+        return caches.match(event.request).then(cached => {
+          return cached || caches.match('/index.html');
+        });
       })
   );
 });
