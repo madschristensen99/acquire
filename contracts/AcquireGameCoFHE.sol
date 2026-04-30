@@ -112,7 +112,7 @@ contract AcquireGameCoFHE {
         require(players[gameState.currentPlayerIndex].playerAddress == msg.sender, "Not your turn");
         require(!gameState.tilePlacedThisTurn, "Already placed tile this turn");
         require(tileIndex < TILES_PER_PLAYER, "Invalid tile index");
-        require(!board[x][y].isPlaced, "Tile already placed");
+        require(!board[x][y].isPlaced && board[x][y].hotelChain == uint8(HotelChain.NONE), "Cannot place tile: spot is occupied or part of an existing chain.");
         
         uint256 playerId = gameState.currentPlayerIndex;
         
